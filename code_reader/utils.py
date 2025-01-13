@@ -52,8 +52,8 @@ def get_filtered_tree(directory):
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         print(result)
         # Check for errors
-        if result.returncode != 0:
-            raise Exception(f"Error running tree command: {result.stderr}")
+        # if result.returncode != 0:
+        #     raise Exception(f"Error running tree command: {result.stderr}")
 
         return result.stdout
     except Exception as e:
