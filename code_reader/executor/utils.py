@@ -126,6 +126,7 @@ def start_tmux_session(session_name, directory):
             subprocess.run(['osascript', '-e', applescript_command])
         else:
             print(" inside linux")
+            print(f"ssh -t -i codeknot_dev_key.pem azureuser@172.206.95.24 'tmux attach-session -t {session_name}'")
             # Use shell command for Ubuntu
             subprocess.run(['tmux', 'new-session', '-d', '-s', session_name, f'cd {directory} && bash'])
     except subprocess.CalledProcessError as e:
