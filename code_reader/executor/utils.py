@@ -121,7 +121,7 @@ def start_tmux_session(session_name, directory):
                 end tell
             '''
             subprocess.run(['osascript', '-e', applescript_command])
-        elif is_ubuntu():
+        else:
             # Use shell command for Ubuntu
             subprocess.run(['tmux', 'new-session', '-d', '-s', session_name, f'cd {directory} && bash'])
     except subprocess.CalledProcessError as e:
