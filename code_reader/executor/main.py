@@ -22,9 +22,9 @@ def call_executor(directory, user_request, project_obj, BASE_DIR, reference_file
         print(f"Failed to change directory: {e}")
         exit(1)
 
-    if platform.system() != 'Darwin':
-        print("This script uses AppleScript to open a new Terminal window and is only compatible with macOS.")
-        return
+    # if platform.system() != 'Darwin':
+    #     print("This script uses AppleScript to open a new Terminal window and is only compatible with macOS.")
+    #     return
 
     # Set the working directory
     directory = WORKING_DIRECTORY
