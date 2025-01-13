@@ -108,6 +108,7 @@ def invoke_model(prompt: str, response_model: Type[BaseModel], is_list: bool = F
 
 def start_tmux_session(session_name, directory):
     try:
+        session_name = "session_01"
         print("system platform: ", platform.system())
         if is_macos():
             print(" inside macos")
