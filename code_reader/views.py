@@ -218,7 +218,7 @@ class QnAView(APIView):
             print("Summary Results of files: ", result)
         else:
             files = project.files_summary
-
+        code_context = "no files present, yet to build the project"
         if user_query:
             prompt = f"""
                 #         Project data: ##{project.name}##\n
