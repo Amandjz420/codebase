@@ -111,33 +111,34 @@ def planner(state: AgentState) -> AgentState:
     response_dict = response.model_dump()
 
     plan = response_dict['steps']
-    while True:
-        print(plan)
-        for i in range(len(plan)):
-            print(f"Step {i+1}: {plan[i]['title']}")
-            print(f"Flow of planning: {plan[i]['psuedo_code']}")
-            # plan.append(response["steps"][i])
-        user_feedback = input("Does the plan look correct? (yes/no): ")
-        if user_feedback.lower() == 'yes':
-            break
-        elif user_feedback.lower() == 'no':
-            feedback = input("Please provide feedback on what needs to be changed: ")
-            prompt = (
-                f"The user provided the following feedback on the plan:\n\n"
-                f"User's Feedback on Plan:\n##{feedback}##\n\n"
-                f"User's Query:\n##{user_query}##\n\n"
-                f"Previous Plan:\n##{str(plan)}##\n\n"
-                "Update the plan based on the user's feedback. Make sure to:\n"
-                "- Keep the steps clear, detailed, and aligned with the user's goal.\n"
-                "- If multiple files are mentioned in one step, split them into separate steps so each file is handled individually.\n"
-                "- Maintain the requirement not to use tools to update file information before committing changes, unless explicitly requested.\n"
-                "- Continue to provide a sequence of steps that the executor can follow without assumptions.\n\n"
-                "Do not omit any crucial information needed to achieve the user's objectives.\n"
-            )
-            response = invoke_model(prompt, PlannerResponse, image=state.get("reference_file", ""))
-            plan = response.model_dump()['steps']
-        else:
-            print("Invalid input. Please enter 'yes' or 'no'.")
+    print("plans :", plan)
+    # while True:
+    #     print(plan)
+    #     for i in range(len(plan)):
+    #         print(f"Step {i+1}: {plan[i]['title']}")
+    #         print(f"Flow of planning: {plan[i]['psuedo_code']}")
+    #         # plan.append(response["steps"][i])
+    #     user_feedback = input("Does the plan look correct? (yes/no): ")
+    #     if user_feedback.lower() == 'yes':
+    #         break
+    #     elif user_feedback.lower() == 'no':
+    #         feedback = input("Please provide feedback on what needs to be changed: ")
+    #         prompt = (
+    #             f"The user provided the following feedback on the plan:\n\n"
+    #             f"User's Feedback on Plan:\n##{feedback}##\n\n"
+    #             f"User's Query:\n##{user_query}##\n\n"
+    #             f"Previous Plan:\n##{str(plan)}##\n\n"
+    #             "Update the plan based on the user's feedback. Make sure to:\n"
+    #             "- Keep the steps clear, detailed, and aligned with the user's goal.\n"
+    #             "- If multiple files are mentioned in one step, split them into separate steps so each file is handled individually.\n"
+    #             "- Maintain the requirement not to use tools to update file information before committing changes, unless explicitly requested.\n"
+    #             "- Continue to provide a sequence of steps that the executor can follow without assumptions.\n\n"
+    #             "Do not omit any crucial information needed to achieve the user's objectives.\n"
+    #         )
+    #         response = invoke_model(prompt, PlannerResponse, image=state.get("reference_file", ""))
+    #         plan = response.model_dump()['steps']
+    #     else:
+    #         print("Invalid input. Please enter 'yes' or 'no'.")
 
     state.update({
         "plan": plan,
