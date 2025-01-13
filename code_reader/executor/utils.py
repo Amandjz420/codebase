@@ -108,7 +108,9 @@ def invoke_model(prompt: str, response_model: Type[BaseModel], is_list: bool = F
 
 def start_tmux_session(session_name, directory):
     try:
+        print("system platform: ", platform.system())
         if is_macos():
+            print(" inside macos")
             # Existing AppleScript code for macOS
             commands = f"tmux new -s {shlex.quote(session_name)} -d; " \
                        f"tmux send-keys -t {shlex.quote(session_name)} 'cd {shlex.quote(directory)}' C-m; " \
@@ -122,6 +124,7 @@ def start_tmux_session(session_name, directory):
             '''
             subprocess.run(['osascript', '-e', applescript_command])
         else:
+            print(" inside linux")
             # Use shell command for Ubuntu
             subprocess.run(['tmux', 'new-session', '-d', '-s', session_name, f'cd {directory} && bash'])
     except subprocess.CalledProcessError as e:
