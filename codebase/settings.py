@@ -27,7 +27,12 @@ SECRET_KEY = 'django-insecure-tvi4*)^8qs-e4)i%u2*$9kqhpi1ha6t06_#k(85s&a*+63f2l0
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    'dev.codeknot.ai'
+]
 DEBUG = True
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -158,4 +163,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
+    'http://dev.codeknot.ai'
+    'https://dev.codeknot.ai'
 ]
