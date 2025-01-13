@@ -19,6 +19,16 @@ from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from django.conf import settings
 
+# Function to check if tmux is installed
+def check_tmux_installed():
+    try:
+        subprocess.run(['tmux', '-V'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError:
+        raise EnvironmentError("tmux is not installed. Please install tmux to use this script. On Ubuntu, you can install it by running 'sudo apt install tmux'. On macOS, use Homebrew with 'brew install tmux'.")
+
+# Invoke the check at the start of the script
+tmux_installed = check_tmux_installed()
+
 # Set your OpenAI API key as an environment variable for security
 OPENAI_API_KEY = settings.OPEN_AI_KEY
 if not OPENAI_API_KEY:
@@ -97,45 +107,49 @@ def invoke_model(prompt: str, response_model: Type[BaseModel], is_list: bool = F
         raise RuntimeError(f"Error invoking model: {e}")
 
 def start_tmux_session(session_name, directory):
-    """
-    Starts a new tmux session in a new Terminal window using AppleScript on macOS.
-    """
-    # Check if the session already exists
-    result = subprocess.run(['tmux', 'has-session', '-t', session_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if result.returncode == 0:
-        raise ValueError(
-            f"Tmux session '{session_name}' already exists. Please choose a different name or kill the existing session.")
+    try:
+        if is_macos():
+            # Existing AppleScript code for macOS
+            commands = f"tmux new -s {shlex.quote(session_name)} -d; " \
+                       f"tmux send-keys -t {shlex.quote(session_name)} 'cd {shlex.quote(directory)}' C-m; " \
+                       f"tmux attach -t {shlex.quote(session_name)}"
 
-    # Use the specified directory
-    commands = f"tmux new -s {shlex.quote(session_name)} -d; " \
-               f"tmux send-keys -t {shlex.quote(session_name)} 'cd {shlex.quote(directory)}' C-m; " \
-               f"tmux attach -t {shlex.quote(session_name)}"
+            applescript_command = f'''
+                tell application "Terminal"
+                    do script "{commands}"
+                    activate
+                end tell
+            '''
+            subprocess.run(['osascript', '-e', applescript_command])
+        elif is_ubuntu():
+            # Use shell command for Ubuntu
+            subprocess.run(['tmux', 'new-session', '-d', '-s', session_name, f'cd {directory} && bash'])
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to start tmux session '{session_name}' in directory '{directory}'. Error: {e}")
 
-    # Build the AppleScript command to open a new Terminal window and run the commands
-    applescript_command = f'''
-        tell application "Terminal"
-            do script "{commands}"
-            activate
-        end tell
-    '''
-
-    # Execute the AppleScript command using osascript
-    subprocess.run(['osascript', '-e', applescript_command])
 
 def send_command_to_tmux(session_name, command, delay=0.1):
     """
     Sends a command to the specified tmux session.
     """
-    for char in command:
-        subprocess.run(['tmux', 'send-keys', '-t', session_name, char])
-        time.sleep(delay)  # Delay between each character
-    subprocess.run(['tmux', 'send-keys', '-t', session_name, 'C-m'])
+    try:
+        for char in command:
+            subprocess.run(['tmux', 'send-keys', '-t', session_name, char])
+            time.sleep(delay)  # Delay between each character
+        subprocess.run(['tmux', 'send-keys', '-t', session_name, 'C-m'])
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to send command to tmux session '{session_name}'. Command: {command}. Error: {e}")
+
 
 def create_tmux_pane_logger(session_name, log_file):
     """
     Pipes the tmux pane output to a log file.
     """
-    subprocess.run(['tmux', 'pipe-pane', '-o', '-t', session_name, f'cat >> {log_file}'])
+    try:
+        subprocess.run(['tmux', 'pipe-pane', '-o', '-t', session_name, f'cat >> {log_file}'])
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to create tmux pane logger for session '{session_name}'. Log file: {log_file}. Error: {e}")
+
 
 def monitor_log_file(log_file, output_buffer_arr):
     """
@@ -197,11 +211,18 @@ def kill_tmux_session(session_name):
             print(f"Session '{session_name}' does not exist or is already closed.")
             return False
 
-        # Kill the session
+        # Kill the session without user prompt
         subprocess.run(["tmux", "kill-session", "-t", session_name], check=True)
         print(f"Session '{session_name}' has been successfully killed.")
         return True
 
     except subprocess.CalledProcessError as e:
-        print(f"Error killing session '{session_name}': {e}")
+        print(f"Error killing session '{session_name}'. Command: kill-session. Error: {e}")
         return False
+
+# Functions to identify the operating system
+def is_macos():
+    return platform.system() == 'Darwin'
+
+def is_ubuntu():
+    return platform.system() == 'Linux'
