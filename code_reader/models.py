@@ -8,6 +8,7 @@ class Project(models.Model):
     summary_output_path = models.CharField(max_length=1000)
     summary = models.TextField()
     tree_structure = models.TextField()
+    zip_file = models.FileField(upload_to='uploads/', null=True, blank=True)
 
 class File(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)

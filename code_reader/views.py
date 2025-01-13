@@ -1,3 +1,5 @@
+import os
+import zipfile
 import ast
 import time
 import base64
@@ -30,10 +32,25 @@ from code_reader.utils import call_openai_llm_without_memory
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        if serializer.is_valid():
+            project = serializer.save()
+            zip_file = project.zip_file
+
+            if zip_file:
+                new_repo_path = os.path.join(settings.MEDIA_ROOT, project.name)
+                os.makedirs(new_repo_path, exist_ok=True)
+
+                with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+                    zip_ref.extractall(new_repo_path)
+
+                files = os.listdir(new_repo_path)
+                if len(files) == 1 and os.path.isdir(os.path.join(settings.MEDIA_ROOT, project.name, files[0])):
+                    new_repo_path = os.path.join(settings.MEDIA_ROOT, project.name, files[0])
+
+                project.repo_path = new_repo_path
+                project.save()
 
 
 class ProjectDetailViewSet(APIView):

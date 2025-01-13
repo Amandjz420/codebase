@@ -1,5 +1,5 @@
 from rest_framework.routers import DefaultRouter
-from django.urls import path
+from django.urls import path, include
 from .views import (ProjectViewSet, FileViewSet, login_view,
                     DocumentDetailFetch, QueryView, ExecutorView,
                     ProjectDetailViewSet, ProjectListViewSet, QnAView,
@@ -11,6 +11,7 @@ router.register(r'projects', ProjectViewSet)
 router.register(r'files', FileViewSet)
 
 urlpatterns = [
+    path('', include(router.urls)),
     path('login/', login_view, name='login'),
     path('document_detail_fetch/', DocumentDetailFetch.as_view(), name='document_detail_fetch'),
     path('projects/', ProjectListViewSet.as_view(), name='project_list'),
@@ -21,4 +22,4 @@ urlpatterns = [
     path('conversation/<str:conversation_id>/', MessagesDetailViewSet.as_view(), name='get_messages'),
     path('projects/<int:project_id>/files/', ProjectFilesView.as_view(), name='project_files'),
     path('user/details/', UserDetailView.as_view(), name='user-details')
-] + router.urls
+]
