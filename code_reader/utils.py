@@ -39,7 +39,7 @@ def get_filtered_tree(directory):
             "tree",
             "-L", "4",  # Limit to 4 levels
             "-I",
-            ".next|node_modules|.git|venv|venv2|venv3|__pycache__|postgres_data|static|.idea|media|dist|build|*.log|*.tmp|public",
+            ".next|node_modules|.git|venv|venv2|venv3|__pycache__|postgres_data|static|.idea|media|dist|build|*.log|*.tmp|public|__MACOSX",
             # Exclude more unnecessary items
             "-a",  # Include hidden files and directories
             "--noreport",  # Exclude summary info (e.g., file count) to keep the output clean
@@ -266,7 +266,7 @@ def run_code_reader(project):
     #     '.DS_Store', 'node_modules', '.next', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
     # ]
     files_to_ignore_patterns = [
-        '*.png', 'static', 'staticFiles', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx',
+        '*.png', 'static', 'staticFiles', '__MACOSX/', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx',
         'venv*', '.env', '.idea/', '.git', '*.txt', '*.mp3', '/static/', '/postgres_data/', 'public/',
         '.DS_Store', 'node_modules', '.next', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
     ]
