@@ -15,4 +15,5 @@ code_test/*
 __pycache__
 db.sqlite3
 media/
+static/
 text_files/

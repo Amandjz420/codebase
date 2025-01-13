@@ -32,7 +32,8 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '0.0.0.0',
     'dev.codeknot.ai'
-]
+    ,'172.206.95.24'
+    ]
 DEBUG = True
 CORS_ALLOW_ALL_ORIGINS = True
 
