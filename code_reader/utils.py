@@ -35,7 +35,18 @@ def get_filtered_tree(directory):
     """
     try:
         # Command to run `tree` with exclusions
-        command = ["tree", "-I", ".next|node_modules|.git|venv|venv2|venv3|__pycache__|postgres_data|static|.idea|media", directory]
+        command = [
+            "tree",
+            "-L", "4",  # Limit to 4 levels
+            "-I",
+            ".next|node_modules|.git|venv|venv2|venv3|__pycache__|postgres_data|static|.idea|media|dist|build|*.log|*.tmp",
+            # Exclude more unnecessary items
+            "-a",  # Include hidden files and directories
+            "--noreport",  # Exclude summary info (e.g., file count) to keep the output clean
+            "--dirsfirst",  # Display directories before files
+            "-f",  # Show full paths for files and directories
+            directory  # Target directory
+        ]
         # Execute the command and capture the output
         print(" ".join(command))
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -249,10 +260,48 @@ def run_code_reader(project):
 
     local_files = list_files_in_repo(repo_path)
     ignore_patterns = read_ignore_patterns(repo_path)
+    # files_to_ignore_patterns = [
+    #     '*.png', 'static', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx', 'media',
+    #     'venv*', '.env', '.idea/', '.git', '*.txt', '*.mp3', '/static/', '/postgres_data/',
+    #     '.DS_Store', 'node_modules', '.next', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
+    # ]
     files_to_ignore_patterns = [
-        '*.png', 'static', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx', 'media',
-        'venv*', '.env', '.idea/', '.git', '*.txt', '*.mp3', '/static/', '/postgres_data/',
-        '.DS_Store', 'node_modules', '.next', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
+        '*.png',  # Image files
+        '*.jpeg',  # Image files
+        '*.svg',  # Image files
+        '*.ico',  # Icons
+        '*.ttf',  # Fonts
+        '*.woff',  # Fonts
+        '*.xlsx',  # Excel files
+        '*.txt',  # Plain text files
+        '*.json',  # JSON files
+        '*.d.ts',  # TypeScript declaration files
+        '*.log',  # Log files
+        '*.lock',  # Lock files (e.g., package-lock.json, yarn.lock)
+        '*.ipynb',  # Jupyter notebooks
+        '*.zip',  # Zip archives
+        '*.tar.gz',  # Tarball archives
+        'static',  # Static directory
+        'staticFilesgit ',  # Static directory
+        'media',  # Media directory
+        '__pycache__',  # Python cache
+        '.pytest_cache',  # Pytest cache
+        '.mypy_cache',  # mypy cache
+        '.DS_Store',  # macOS filesystem metadata
+        'Thumbs.db',  # Windows image cache file
+        'db.sqlite3',  # SQLite database
+        'coverage',  # Coverage directory or files
+        'coverage*',  # Any coverage-related files (e.g., coverage.xml)
+        '.env',  # Environment files
+        'venv*',  # Virtual environments (venv, venv2, etc.)
+        '.idea',  # IDE (JetBrains) config
+        '.vscode',  # VSCode config
+        '.git',  # Git repository data
+        'node_modules',  # Node.js dependencies
+        '.next',  # Next.js build output
+        '.idea/',  # Redundant IDE config folder reference
+        '/static/',  # Another form of static path reference
+        '/postgres_data/'  # PostgreSQL data directory
     ]
     ignore_patterns.extend(files_to_ignore_patterns)
 
