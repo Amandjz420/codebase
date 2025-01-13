@@ -338,7 +338,7 @@ class ExecutorView(APIView):
         if len(str(files)) > 50000:
             documents = [Document(page_content=file['summary'], metadata={"path": file['path']}) for file in files]
             files = summary_maker_chain.invoke(documents)
-            project.summary = files
+            project.files_summary = files
             project.save()
         code_context = "no files present, yet to build the project"
         if user_query and files:

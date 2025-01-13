@@ -199,6 +199,8 @@ def read_ignore_patterns(repo_path):
                     line = line.strip()
                     if line and not line.startswith('#'):
                         ignore_patterns.append(line)
+    # print("ignore_patterns")
+    # print(ignore_patterns)
     return ignore_patterns
 
 
@@ -282,7 +284,7 @@ def run_code_reader(project):
         '*.zip',  # Zip archives
         '*.tar.gz',  # Tarball archives
         'static',  # Static directory
-        'staticFilesgit ',  # Static directory
+        'staticFiles ',  # Static directory
         'media',  # Media directory
         '__pycache__',  # Python cache
         '.pytest_cache',  # Pytest cache

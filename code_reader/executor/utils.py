@@ -20,14 +20,15 @@ from langchain_openai import ChatOpenAI
 from django.conf import settings
 
 # Function to check if tmux is installed
-def check_tmux_installed():
-    try:
-        subprocess.run(['tmux', '-V'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("tmux is not installed. Please install tmux to use this script. On Ubuntu, you can install it by running 'sudo apt install tmux'. On macOS, use Homebrew with 'brew install tmux'.")
 
-# Invoke the check at the start of the script
-tmux_installed = check_tmux_installed()
+# def check_tmux_installed():
+#     try:
+#         subprocess.run(['tmux', '-V'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         return True
+#     except FileNotFoundError:
+#         raise RuntimeError("tmux is not installed. Please install it using 'sudo apt install tmux'.")
+# # Invoke the check at the start of the script
+# tmux_installed = check_tmux_installed()
 
 # Set your OpenAI API key as an environment variable for security
 OPENAI_API_KEY = settings.OPEN_AI_KEY
