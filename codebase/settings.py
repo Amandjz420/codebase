@@ -31,8 +31,8 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '0.0.0.0',
-    'dev.codeknot.ai'
-    ,'172.206.95.24'
+    'dev.codeknot.ai',
+    '172.206.95.24'
     ]
 DEBUG = True
 CORS_ALLOW_ALL_ORIGINS = True
@@ -164,6 +164,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
-    'http://dev.codeknot.ai'
     'https://dev.codeknot.ai'
 ]

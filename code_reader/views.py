@@ -317,8 +317,8 @@ class ExecutorView(APIView):
             files = summary_maker_chain.invoke(documents)
             project.summary = files
             project.save()
-
-        if user_query:
+        code_context = "no files present, yet to build the project"
+        if user_query and files:
             prompt_for_fetching_file = f"""
                 #         Project data: ##{project.name}##\n
                 #         Project summary: ##{project.summary}##\n
@@ -338,24 +338,26 @@ class ExecutorView(APIView):
             code_context = File.objects.filter(path__in=file_paths).values('path', 'content', 'summary')
             if len(str(code_context)) > 50000:
                 code_context = File.objects.filter(path__in=file_paths).values('path', 'content')
-            # parser = PydanticOutputParser(pydantic_object=response_model)
-        if code_context:
-            print('code_context retrieved')
-            # print(code_context)
 
-            # Prepare the prompt or input for the LLM
-            prompt = f"""
-                You are an AI assistant designed to interpret user requests and provide actionable insights for a project's code.
-                Below is the project information, including its file structure, summary, and individual file details.
-                ### Project Information:
-                - **File Structure**: {project.tree_structure}
-                - **Project Summary**: {project.summary}
-                - **Related Files content and summary**: {code_context}
-                - **Summary of the conversation**: {conv_summary}
-                ### User Query:
-                {user_query}
-                ### Response:
-            """
+            print('code_context retrieved')
+        else:
+            print('no code_context before, yet to build the project')
+        # print(code_context)
+
+        # Prepare the prompt or input for the LLM
+        prompt = f"""
+            You are an AI assistant designed to interpret user requests and provide actionable insights for a project's code.
+            Below is the project information, including its file structure, summary, and individual file details.
+            ### Project Information:
+            - **File Structure**: {project.tree_structure}
+            - **Project Summary**: {project.summary}
+            - **Related Files content and summary**: {code_context}
+            - **Summary of the conversation**: {conv_summary}
+            ### User Query:
+            {user_query}
+            ### Response:
+        """
+
         return prompt, summary_memory
 
     def call_llm(self, prompt, base64_image):
