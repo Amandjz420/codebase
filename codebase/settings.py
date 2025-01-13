@@ -37,6 +37,14 @@ ALLOWED_HOSTS = [
 DEBUG = True
 CORS_ALLOW_ALL_ORIGINS = True
 
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'https://dev.codeknot.ai'
+]
+
+CSRF_TRUSTED_ORIGINS = ['https://*.codeknot.ai']
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -161,8 +169,3 @@ SERPAPI_API_KEY = os.getenv('SERPAPI_API_KEY')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# CORS settings
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'https://dev.codeknot.ai'
-]
