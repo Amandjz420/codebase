@@ -125,17 +125,17 @@ def call_executor(directory, user_request, project_obj, BASE_DIR, reference_file
         exit(1)
 
 
-    flag = True
-    while flag:
-        user_input = input(f"Do you want to kill the tmux session '{session_name}'? (yes/no): ").strip().lower()
-        if user_input in ["yes", "y"]:
-            killed = kill_tmux_session(session_name)
-            flag = not killed
-        elif user_input in ["no", "n"]:
-            print(f"The tmux session '{session_name}' was not killed.")
-            flag = False
-        else:
-            print("Invalid input. Please enter 'yes' or 'no'.")
+    # flag = True
+    # while flag:
+    #     user_input = input(f"Do you want to kill the tmux session '{session_name}'? (yes/no): ").strip().lower()
+    #     if user_input in ["yes", "y"]:
+    #         killed = kill_tmux_session(session_name)
+    #         flag = not killed
+    #     elif user_input in ["no", "n"]:
+    #         print(f"The tmux session '{session_name}' was not killed.")
+    #         flag = False
+    #     else:
+    #         print("Invalid input. Please enter 'yes' or 'no'.")
     kill_tmux_session(session_name)
 
     return "done"

@@ -131,11 +131,15 @@ class QueryView(APIView):
         # Extract the user's query from the request
         user_query = request.data['query']
         files = list(File.objects.filter(project=project).values('path', 'summary'))
-        if len(str(files)) > 50000:
+        if len(str(files)) > 50000 and not project.files_summary:
             documents = [Document(page_content=file['summary'], metadata={"path": file['path']}) for file in files]
             result = summary_maker_chain.invoke(documents)
             files = result
+            project.files_summary = files
+            project.save()
             print("Summary Results of files: ", result)
+        else:
+            files = project.files_summary
 
         if user_query:
             # Initialize the OpenAI API with your API key
@@ -205,13 +209,15 @@ class QnAView(APIView):
         user_query = request.data['query']
         print(user_query)
         files = list(File.objects.filter(project=project).values('path', 'summary'))
-        if len(str(files)) > 50000:
+        if len(str(files)) > 50000 and not project.files_summary:
             documents = [Document(page_content=file['summary'], metadata={"path": file['path']}) for file in files]
             result = summary_maker_chain.invoke(documents)
             files = result
-            project.summary = files
+            project.files_summary = files
             project.save()
             print("Summary Results of files: ", result)
+        else:
+            files = project.files_summary
 
         if user_query:
             prompt = f"""

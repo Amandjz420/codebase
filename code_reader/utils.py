@@ -19,7 +19,7 @@ from django.conf import settings
 # Initialize OpenAI and memory
 client = OpenAI(api_key=settings.OPEN_AI_KEY)
 llm = ChatOpenAI(model='gpt-4o', temperature=0.7, api_key=settings.OPEN_AI_KEY)
-llm_mini = ChatOpenAI(model='gpt-4o-mini', temperature=0, api_key=settings.OPEN_AI_KEY)
+llm_mini = ChatOpenAI(model='gpt-4o-mini', temperature=0.4, api_key=settings.OPEN_AI_KEY)
 summary_memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=500)
 summary_maker_chain = load_summarize_chain(llm=llm_mini, chain_type='map_reduce', token_max=10000)
 
@@ -35,7 +35,7 @@ def get_filtered_tree(directory):
     """
     try:
         # Command to run `tree` with exclusions
-        command = ["tree", "-I", ".next|node_modules|.git|venv|venv2|venv3|__pycache__|postgres_data|static|.idea", directory]
+        command = ["tree", "-I", ".next|node_modules|.git|venv|venv2|venv3|__pycache__|postgres_data|static|.idea|media", directory]
         # Execute the command and capture the output
         print(" ".join(command))
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -115,7 +115,7 @@ def call_openai_llm_without_memory(prompt):
 
 
 
-def call_openai_llm(prompt):
+def call_openai_llm(prompt, model="gpt-4o"):
     try:
         summary_var = summary_memory.load_memory_variables({})
         if 'history' in summary_var:
@@ -127,7 +127,7 @@ def call_openai_llm(prompt):
                 {"role": "assistant", "content": f"You are a code reader agent. Context so far:\n\n{context}\n\n"},
                 {"role": "user", "content": prompt}
             ],
-            model="gpt-4o",
+            model=model,
             temperature=0.7,
             stream=False
         )
@@ -146,10 +146,9 @@ def summarize_file_content(file_path, content, file_structure):
     Summarize the following content from the file **{file_path}**\n
     Content:\n
     ##{content}##\n\n
-
-    Provide a concise summary capturing the main components, the role of this file in the project, and any key functions or classes it contains.
+    Provide a concise summary capturing the main components, the role of this file in the project, and any key functions or classes it contains. Also what are the import and export
     """
-    return call_openai_llm(prompt)
+    return call_openai_llm(prompt, model='gpt-4o-mini')
 
 
 def analyze_file_content(file_path, content, file_structure):
@@ -174,7 +173,7 @@ def analyze_file_content(file_path, content, file_structure):
     8. if frontend framework, mention the page navigation based on component clicks or processing.\n
     9. any security concerns.\n
     """
-    return call_openai_llm(prompt)
+    return call_openai_llm(prompt, 'gpt-4o-mini')
 
 
 def read_ignore_patterns(repo_path):
@@ -229,15 +228,15 @@ def run_file_summarizer(project_id, file_path):
     project.tree_structure = tree_output
     project.save()
     summary = summarize_file_content(file_path, file_content, tree_output)
-    analysis = analyze_file_content(file_path, file_content, tree_output)
+    #FIXME: removing analysis, as we are not using it anywhere for now
+    # analysis = analyze_file_content(file_path, file_content, tree_output)
     file_obj, created = File.objects.get_or_create(
         path=file_path,
         project=project,
-        defaults={'analysis': analysis, "summary": summary, "content": file_content}
+        defaults={'analysis': summary, "summary": summary, "content": file_content}
     )
     if not created:
-        file_obj.analysis = analysis
-        file_obj.analysis = analysis
+        file_obj.analysis = summary
         file_obj.summary = summary
         file_obj.content = file_content
         file_obj.save()
@@ -251,7 +250,7 @@ def run_code_reader(project):
     local_files = list_files_in_repo(repo_path)
     ignore_patterns = read_ignore_patterns(repo_path)
     files_to_ignore_patterns = [
-        '*.png', 'static', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx',
+        '*.png', 'static', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx', 'media',
         'venv*', '.env', '.idea/', '.git', '*.txt', '*.mp3', '/static/', '/postgres_data/',
         '.DS_Store', 'node_modules', '.next', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
     ]
@@ -293,12 +292,13 @@ def run_code_reader(project):
         # print(path, )
         summary = summarize_file_content(path, content, tree_output)
         summary_memory.save_context({"input": path}, {"output": summary})
-        analysis = analyze_file_content(path, content, tree_output)
-        file_analysis[path] = analysis
+        # FIXME: not using analyze_file_content for now, so replacing it with summary.
+        # analysis = analyze_file_content(path, content, tree_output)
+        file_analysis[path] = summary
         file_obj, created = File.objects.update_or_create(
             path=path,
             project=project,
-            defaults={'analysis': analysis, "summary": summary, "content": content}
+            defaults={'analysis': summary, "summary": summary, "content": content}
         )
         if created:
             print("File " + path + " created.")

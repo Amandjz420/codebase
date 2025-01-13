@@ -6,6 +6,7 @@ class Project(models.Model):
     name = models.CharField(max_length=255)
     repo_path = models.CharField(max_length=1000)
     summary_output_path = models.CharField(max_length=1000)
+    files_summary = models.TextField(null=True, blank=True)
     summary = models.TextField()
     tree_structure = models.TextField()
     zip_file = models.FileField(upload_to='uploads/', null=True, blank=True)
