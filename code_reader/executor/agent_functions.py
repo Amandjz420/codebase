@@ -37,6 +37,10 @@ summary_memory = ConversationSummaryBufferMemory(
 summary_memory.output_key = "Executor"
 summary_memory.input_key = "Planner"
 
+
+#  - need_user_input: Use this when you need the user to provide additional information or clarification.
+#       Explain clearly why you need their input.\n
+
 tools_info = """
     - code_editor: Use this to create or modify code files. 
       Inputs are the relative 'filepath' and 'instructions' on how to modify the code.
@@ -46,12 +50,10 @@ tools_info = """
 
     - terminal_executor: Use this to execute terminal commands. Input should be the command to run.\n
 
-    - need_user_input: Use this when you need the user to provide additional information or clarification.
-      Explain clearly why you need their input.\n
-      
-    - search_web_browser: Use this only when you want to browse the web browser. 
-                give useful query to search for as a param. Also always ask user permission 
-                before using search_web_browser tool.\n
+    - search_web_browser: Use this tool when you need to browse the web for current or detailed information.
+     Provide a well-crafted, specific query as a parameter to ensure accurate results. 
+     This is especially useful for resolving recurring issues, accessing up-to-date information, 
+     or when additional insights from the internet are required.\n
     
     - update_project_root_dir_and_tree_structure: use this tool to update the repo_path and tree_structure of the project,
                 once you create new project in any framework like django, nextjs, flask, etc.
@@ -96,10 +98,6 @@ def planner(state: AgentState) -> AgentState:
         "3. If the user query references specific files or paths, use these exact paths in the steps.\n"
         "4. Ensure the steps are detailed enough so that the executor agent, using its available tools, "
         "can follow them without additional assumptions.\n\n"
-        # "After completing the main steps:\n"
-        # "- Include a step to use `git status` to review which files have changed.\n"
-        # "- Then prompt the user to decide if they want to commit these changes.\n"
-        # "- If they choose to commit, include steps to summarize and store the updated information for each changed file using the appropriate tool.\n"
         "Available tools for execution (for reference):\n"
         f"{tools_info}\n\n"
         "Additional context:\n"

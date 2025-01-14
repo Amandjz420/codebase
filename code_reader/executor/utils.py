@@ -87,7 +87,7 @@ def invoke_model(prompt: str, response_model: Type[BaseModel], is_list: bool = F
         else:
             message = HumanMessage(content=final_prompt)
 
-        if intelligence == "medium":
+        if intelligence == "medium" or image:
             response = llm.invoke([message])
         elif intelligence == "high":
             print("trying to invoke o1-preview")

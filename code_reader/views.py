@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from conversation.models import Conversation, Messages
 from .executor.utils import invoke_model
-from .executor.outputparser import FilepathResponse
+from .executor.outputparser import FilepathResponse, SupervisorResponse
 from .serializers import ProjectSerializer, FileSerializer, DocumentDetailFetchSerializer
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
@@ -238,15 +238,15 @@ class QnAView(APIView):
         code_context = "no files present, yet to build the project"
         if user_query and files:
             prompt = f"""
-                #         Project data: ##{project.name}##\n
-                #         Project summary: ##{project.summary}##\n
-                #         Files summary docs: ##{files}##\n
-                #         Summary of the conversation : ##{str(summary_memory.load_memory_variables({}))}##\n\n
-                #         Based on the above given data, Answer the following questions:
-                #         User Query: ##{user_query}##\n\n
-                #         Yours Instruction: 
-                            1. give me file paths of all the files that you need the content for giving better information for user query
-                
+                #   Project data: ##{project.name}##\n
+                #   Project summary: ##{project.summary}##\n
+                #   Files summary docs: ##{files}##\n
+                #   Summary of the conversation : ##{str(summary_memory.load_memory_variables({}))}##\n\n
+                #  Based on the above given data, Answer the following questions:
+                #  User Query: ##{user_query}##\n\n
+                #  Yours Instruction: 
+                     1. give me file paths of all the files that you need the content for giving better
+                      information for user query
                     """
             response = invoke_model(prompt, FilepathResponse)
             file_paths = response.model_dump()['files']
@@ -270,7 +270,7 @@ class QnAView(APIView):
                 User Query: ##{user_query}##\n\n
                 Notes for you answer:
                     1. if the question is about changing or adding something in the project's code,
-                     make the answer so that you will be telling what user needs to do. \n
+                     make the answer so that you will be telling what user needs to do in what all files. \n
                     2. if the question is about some information of the code, answer it
                      in structured way for human to understand and in detail\n\n
                 Answer:
@@ -318,9 +318,19 @@ class ExecutorView(APIView):
 
         # Call LLM and handle execution
         try:
-            answer = self.call_llm(prompt, base64_image)
+            response = invoke_model(prompt, SupervisorResponse, image=base64_image)
+            answer = response.model_dump()
+
+            # If execution is required
+            if answer['isChangeRequired']:
+                print("answer['isChangeRequired']")
+                print(answer['isChangeRequired'])
+                executor_prompt = f"""
+                    User Initial Request: \n```{user_query}``\n\n
+                    And Code Reader suggested: \n###{answer['aiResponse']}###\n\n
+                """
+                call_executor(project.repo_path, executor_prompt, project, settings.BASE_DIR, base64_image)
             self.save_interaction(conversation_obj, summary_memory,user_query, answer)
-            call_executor(project.repo_path, answer, project, settings.BASE_DIR, base64_image)
             return Response({'answer': answer}, status=200)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
@@ -387,14 +397,23 @@ class ExecutorView(APIView):
         # Prepare the prompt or input for the LLM
         prompt = f"""
             You are an AI assistant designed to interpret user requests and provide actionable insights for a project's code.
-            Below is the project information, including its file structure, summary, and individual file details.
+            Below is the project information, including its file structure, summary, conversation history, and individual file details.
+    
             ### Project Information:
+            - **Project Name**: {project.name}
             - **File Structure**: {project.tree_structure}
             - **Project Summary**: {project.summary}
-            - **Related Files content and summary**: {code_context}
-            - **Summary of the conversation**: {conv_summary}
+            - **Files Summary and Content**: {code_context}
+            - **Summary of the Conversation**: {str(summary_memory.load_memory_variables({}))}
+    
             ### User Query:
             {user_query}
+    
+            ### Notes for Your Response:
+            1. If the question is about modifying or adding something in the project's code,
+                provide a detailed step-by-step response specifying what needs to be done in which files.
+            2. If the question seeks information or explanation about the code, answer in a structured 
+                and detailed manner for easy understanding.
             ### Response:
         """
 

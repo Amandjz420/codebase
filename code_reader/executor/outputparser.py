@@ -24,3 +24,7 @@ class FeedbackResponse(BaseModel):
 
 class FilepathResponse(BaseModel):
     files: List[str] = Field(description="list of file paths")
+
+class SupervisorResponse(BaseModel):
+    isChangeRequired: bool = Field(description="did user ask to change(or do something) in the project, or its code. ")
+    aiResponse: str = Field(description="response from the LLM for the instructions")

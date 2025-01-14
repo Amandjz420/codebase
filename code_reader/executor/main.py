@@ -54,7 +54,7 @@ def call_executor(directory, user_request, project_obj, BASE_DIR, reference_file
 
     # User query
     user_query = f"""
-            User Request:\n{user_request}\n\n
+            User Request:\n```{user_request}```\n\n
             Notes:\n
             # General Conditions:\n
             # - Dont change the syntax of the code i provided you.\n
