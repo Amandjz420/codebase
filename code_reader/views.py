@@ -327,7 +327,7 @@ class ExecutorView(APIView):
                 print(answer['isChangeRequired'])
                 executor_prompt = f"""
                     User Initial Request: \n```{user_query}``\n\n
-                    And Code Reader suggested: \n###{answer['aiResponse']}###\n\n
+                    And Code Reader suggested: \n###{answer['aiReply']}###\n\n
                 """
                 call_executor(project.repo_path, executor_prompt, project, settings.BASE_DIR, base64_image)
             self.save_interaction(conversation_obj, summary_memory,user_query, answer)

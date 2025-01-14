@@ -27,4 +27,4 @@ class FilepathResponse(BaseModel):
 
 class SupervisorResponse(BaseModel):
     isChangeRequired: bool = Field(description="did user ask to change(or do something) in the project, or its code. ")
-    aiResponse: str = Field(description="response from the LLM for the instructions")
+    aiReply: str = Field(description="response from the LLM for the instructions")
