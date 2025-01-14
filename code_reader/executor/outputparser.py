@@ -26,7 +26,11 @@ class FilepathResponse(BaseModel):
     files: List[str] = Field(description="list of file paths")
 
 class SupervisorResponse(BaseModel):
-    aiReply: str = Field(description="Response from the LLM with in-depth details")
+    aiReply: str = Field(
+        description="Your response based on the project's files, providing either the requested information in details "
+                    "or a detailed step-by-step guide for implementing the required changes.",
+        max_length=8000
+    )
     isExecutionRequired: bool = Field(default=False,
                     description="Determines if the interaction with terminal is required "
                                 "or any modification in code.")
