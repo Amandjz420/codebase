@@ -48,6 +48,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 files = os.listdir(new_repo_path)
                 if len(files) == 1 and os.path.isdir(os.path.join(settings.MEDIA_ROOT, project.name, files[0])):
                     new_repo_path = os.path.join(settings.MEDIA_ROOT, project.name, files[0])
+                if len(files) == 2 and os.path.isdir(os.path.join(new_repo_path, '__MACOSX')):
+                    new_repo_path = os.path.join(new_repo_path, files[0] if files[0] != '__MACOSX' else files[1])
 
                 project.repo_path = new_repo_path
                 project.save()
