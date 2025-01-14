@@ -3,7 +3,7 @@ import zipfile
 import ast
 import time
 import base64
-
+from django.core.validators import validate_email
 from rest_framework import viewsets, permissions
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -94,12 +94,29 @@ class FileViewSet(viewsets.ModelViewSet):
 def login_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
+
+    if not username or not password:
+        return Response({'error': 'Username and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create user if first_name and last_name are provided
+    if first_name and last_name:
+        user, created = User.objects.get_or_create(username=username, defaults={
+            'first_name': first_name,
+            'last_name': last_name,
+        })
+        if created:
+            user.set_password(password)  # Hash the password
+            user.save()
+
+    # Authenticate the user
     user = authenticate(username=username, password=password)
     if user is not None:
-        token, created = Token.objects.get_or_create(user=user)
+        token, _ = Token.objects.get_or_create(user=user)
         return Response({'token': token.key})
     else:
-        return Response({'error': 'Invalid credentials'}, status=400)
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DocumentDetailFetch(APIView):
