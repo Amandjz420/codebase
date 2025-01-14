@@ -322,15 +322,21 @@ class ExecutorView(APIView):
             answer = response.model_dump()
 
             # If execution is required
-            if answer['isChangeRequired']:
-                print("answer['isChangeRequired']")
-                print(answer['isChangeRequired'])
+            # Determine if executor is needed based on user_query
+            print("condition for executor to be needed")
+            print(SupervisorResponse.determine_executor_need(user_query))
+            print(answer['isExecutionRequired'])
+            print(answer['aiReply'])
+
+            if SupervisorResponse.determine_executor_need(user_query) or answer['isExecutionRequired']:
+                print("Executor needed based on user query.")
                 executor_prompt = f"""
-                    User Initial Request: \n```{user_query}``\n\n
-                    And Code Reader suggested: \n###{answer['aiReply']}###\n\n
-                """
+                                User Initial Request: \n```{user_query}``\n\n
+                                And Code Reader suggested: \n###{answer['aiReply']}###\n\n
+                            """
                 call_executor(project.repo_path, executor_prompt, project, settings.BASE_DIR, base64_image)
-            self.save_interaction(conversation_obj, summary_memory,user_query, answer)
+
+            self.save_interaction(conversation_obj, summary_memory,user_query, answer['aiReply'])
             return Response({'answer': answer}, status=200)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
@@ -362,11 +368,15 @@ class ExecutorView(APIView):
             summary_memory.save_context({"input": "conversation till now"}, {"output": conv_summary})
 
         files = list(File.objects.filter(project=project).values('path', 'summary'))
-        if len(str(files)) > 50000:
+        if len(str(files)) > 50000 and not project.files_summary:
             documents = [Document(page_content=file['summary'], metadata={"path": file['path']}) for file in files]
-            files = summary_maker_chain.invoke(documents)
+            result = summary_maker_chain.invoke(documents)
+            files = result
             project.files_summary = files
             project.save()
+            print("Summary Results of files: ", result)
+        else:
+            files = project.files_summary
         code_context = "no files present, yet to build the project"
         if user_query and files:
             prompt_for_fetching_file = f"""
@@ -375,7 +385,7 @@ class ExecutorView(APIView):
                 #         Files summary docs: ##{files}##\n
                 #         Summary of the conversation : ##{str(conv_summary)}##\n\n
                 #         Based on the above given data, Answer the following questions:
-                #         User Query: ##{user_query}##\n\n
+                #         User's Query: ##{user_query}##\n\n
                 #         Yours Instruction: 
                             1. give me file paths of all the files that you need the content so that you can
                             interpret user requests and provide actionable insights for a project's code.

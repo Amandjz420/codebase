@@ -26,5 +26,25 @@ class FilepathResponse(BaseModel):
     files: List[str] = Field(description="list of file paths")
 
 class SupervisorResponse(BaseModel):
-    isChangeRequired: bool = Field(description="did user ask to change(or do something) in the project, or its code. ")
-    aiReply: str = Field(description="response from the LLM for the instructions")
+    aiReply: str = Field(description="Response from the LLM with in-depth details")
+    isExecutionRequired: bool = Field(default=False,
+                    description="Determines if the interaction with terminal is required "
+                                "or any modification in code.")
+
+    @staticmethod
+    def determine_executor_need(user_query: str) -> bool:
+        # List of keywords that indicate executor requirements
+        execution_keywords = [
+            "change", "modify", "update", "execute", "run", "delete", "add", "remove", "create"
+            "install", "configure", "deploy", "build", "terminal", "command"
+        ]
+
+        # Normalize query for keyword search
+        user_query_lower = user_query.lower()
+
+        # Check for any keyword match in the user's query
+        for keyword in execution_keywords:
+            if keyword in user_query_lower:
+                return True
+
+        return False
