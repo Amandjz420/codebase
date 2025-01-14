@@ -424,9 +424,8 @@ class ProjectFilesView(APIView):
 
 
 class UserDetailView(APIView):
-    @permission_classes([IsAuthenticated])
+    permission_classes = [IsAuthenticated]
     def get(self, request):
-        print()
         token_key = request.headers.get('Authorization').split(" ")[1]
         token = Token.objects.get(key=token_key)
         user = token.user
