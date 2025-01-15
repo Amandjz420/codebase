@@ -1,12 +1,12 @@
 from django.contrib import admin
 from code_reader.models import File, Project
 from code_reader.utils import run_code_reader, run_file_summarizer
-
+from code_reader.tasks import start_code_reading
 
 @admin.action(description="code reader on project and save content to db")
 def start_reading_code(modeladmin, request, queryset):
     project_obj = queryset.first()
-    run_code_reader(project_obj)
+    start_code_reading.delay(project_obj.id)
 
 
 @admin.action(description="updating the summary of new code from file in db")
