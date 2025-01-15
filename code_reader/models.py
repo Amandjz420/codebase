@@ -56,7 +56,8 @@ class File(models.Model):
     summary = models.TextField()
     content = models.TextField()
     analysis = models.TextField()
-
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+    is_file_type = models.BooleanField(default=True)
 class ImageUpload(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='images/')

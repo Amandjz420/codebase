@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 
 from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from django.conf import settings
 
 # Function to check if tmux is installed
@@ -41,12 +42,27 @@ llm = ChatOpenAI(
     temperature=0.7,
     model_name='gpt-4o',
 )
+# llm = ChatGroq(
+#     model="llama-3.3-70b-versatile",  # Specify the desired model
+#     temperature=0.7,             # Adjust the temperature as needed
+#     api_key=OPENAI_API_KEY,             # Set the maximum number of tokens
+#     timeout=60,                  # Set a timeout for API requests
+#     max_retries=3                # Define the number of retries for failed requests
+# )
+
 smarter_llm = ChatOpenAI(
     api_key=OPENAI_API_KEY,
     model_name='o1-preview',
     temperature=1
 )
 
+smarter_llm = ChatGroq(
+    model="llama3-70b-8192",  # Specify the desired model
+    temperature=0.7,             # Adjust the temperature as needed
+    api_key=OPENAI_API_KEY,             # Set the maximum number of tokens
+    timeout=60,                  # Set a timeout for API requests
+    max_retries=3                # Define the number of retries for failed requests
+)
 SESSION_NAME = None
 output_buffer = []
 def get_session_name() -> str:

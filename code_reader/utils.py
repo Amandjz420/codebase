@@ -4,6 +4,7 @@ import fnmatch
 import subprocess
 import time
 import base64
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -13,6 +14,7 @@ from openai import OpenAI
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains.summarize import load_summarize_chain
 from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from code_reader.models import File, Project
 from django.conf import settings
 
@@ -20,6 +22,20 @@ from django.conf import settings
 client = OpenAI(api_key=settings.OPEN_AI_KEY)
 llm = ChatOpenAI(model='gpt-4o', temperature=0.7, api_key=settings.OPEN_AI_KEY)
 llm_mini = ChatOpenAI(model='gpt-4o-mini', temperature=0.4, api_key=settings.OPEN_AI_KEY)
+# llm = ChatGroq(
+#     model="llama3-70b-8192",  # Specify the desired model
+#     temperature=0.7,             # Adjust the temperature as needed
+#     api_key=settings.OPEN_AI_KEY,             # Set the maximum number of tokens
+#     timeout=60,                  # Set a timeout for API requests
+#     max_retries=3                # Define the number of retries for failed requests
+# )
+# llm_mini = ChatGroq(
+#     model="llama3-70b-8192",  # Specify the desired model
+#     temperature=0.7,             # Adjust the temperature as needed
+#     api_key=settings.OPEN_AI_KEY,             # Set the maximum number of tokens
+#     timeout=60,                  # Set a timeout for API requests
+#     max_retries=3                # Define the number of retries for failed requests
+# )
 summary_memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=500)
 summary_maker_chain = load_summarize_chain(llm=llm_mini, chain_type='map_reduce', token_max=10000)
 
@@ -68,6 +84,18 @@ def list_files_in_repo(repo_path):
             repo_files.append(os.path.join(root, file))
     return repo_files
 
+def list_folders_in_repo(repo_path):
+    """
+    Recursively lists all folders in the given repository path.
+
+    :param repo_path: Path to the repository.
+    :return: A list of folder paths.
+    """
+    folder_paths = []
+    for root, dirs, files in os.walk(repo_path):
+        for dir_name in dirs:
+            folder_paths.append(os.path.join(root, dir_name))
+    return folder_paths
 
 def read_file_content(file_path):
     try:
@@ -253,12 +281,13 @@ def run_file_summarizer(project_id, file_path):
         file_obj.save()
     return file_obj
 
-def run_code_reader(project):
+def run_code_reader(project, file_obj=None):
     """First time reading the project"""
     # Main Logic
     repo_path = project.repo_path
 
     local_files = list_files_in_repo(repo_path)
+    local_folders = list_folders_in_repo(repo_path)
     ignore_patterns = read_ignore_patterns(repo_path)
     # files_to_ignore_patterns = [
     #     '*.png', 'static', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx', 'media',
@@ -266,9 +295,9 @@ def run_code_reader(project):
     #     '.DS_Store', 'node_modules', '.next', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
     # ]
     files_to_ignore_patterns = [
-        '*.png', 'static', 'staticFiles', '__MACOSX/', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx',
-        'venv*', '.env', '.idea/', '.git', '*.txt', '*.mp3', '/static/', '/postgres_data/', 'public/',
-        '.DS_Store', 'node_modules', '.next', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
+        '*.png', 'static/', 'staticFiles/', '__MACOSX/', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx',
+        'venv*', '.env', '.idea/', '.git', '*.txt', '*.mp3', 'static/', 'postgres_data/', 'public/',
+        '.DS_Store', 'node_modules/', '.next/', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
     ]
     ignore_patterns.extend(files_to_ignore_patterns)
 
@@ -281,8 +310,14 @@ def run_code_reader(project):
         content = read_file_content(file)
         if content:
             file_contents[file] = content
-
-
+    final_folders = []
+    for folder in local_folders:
+        # print(file)
+        if should_ignore_file(folder, ignore_patterns):
+            continue
+        # content = read_file_content(folder)
+        final_folders.append(folder)
+    print(final_folders)
     file_analysis = {}
     tree_output = get_filtered_tree(repo_path)
     project.tree_structure = str(tree_output)
@@ -296,6 +331,36 @@ def run_code_reader(project):
         project_summary_till_now = ast.literal_eval(project.summary)
         if 'history' in project_summary_till_now:
             summary_memory.save_context({"input": "code_reading history till now"}, {"output": project_summary_till_now["history"]})
+
+    for folder_path in final_folders:
+        print(f"Processing folder: {folder_path}")
+
+        # Check if the folder is already in the database
+        folder_object = File.objects.filter(path=folder_path, project=project).first()
+
+        # If the folder is already processed, skip it
+        if folder_object:
+            print(f"Folder {folder_object.path} skipped")
+            continue
+
+        parent_folder_path = Path(folder_path).parent
+        if parent_folder_path == Path(repo_path):
+            parent_folder = None
+        else:
+            parent_folder = File.objects.filter(path=str(parent_folder_path), project=project).first()
+        folder_obj, created = File.objects.update_or_create(
+            path=folder_path,
+            project=project,
+            defaults={
+                'analysis': '',
+                'summary': '',
+                'content': '',  # Folders may not have content
+                'parent': parent_folder,
+                'is_file_type': False  # Assuming this field distinguishes between files and folders
+            }
+        )
+        # Check if the folder is already in the database
+        folder_object = File.objects.filter(path=folder_path, project=project).first()
 
     for path, content in file_contents.items():
         # Print the captured output
@@ -312,11 +377,27 @@ def run_code_reader(project):
         # FIXME: not using analyze_file_content for now, so replacing it with summary.
         # analysis = analyze_file_content(path, content, tree_output)
         file_analysis[path] = summary
+
+        parent_path = Path(path).parent
+        if parent_path == Path(repo_path):
+            parent_file = None
+        else:
+            print(f"parent path: {parent_path}")
+            parent_file = File.objects.filter(path=str(parent_path), project=project).first()
+            if not parent_file:
+                File.objects.create(path=path,project=project, is_file_type=False)
+
         file_obj, created = File.objects.update_or_create(
             path=path,
             project=project,
-            defaults={'analysis': summary, "summary": summary, "content": content}
+            defaults={
+                'analysis': summary,
+                'summary': summary,
+                'content': content,
+                'parent': parent_file
+            }
         )
+
         if created:
             print("File " + path + " created.")
         else:
@@ -330,3 +411,32 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
+def build_tree(node):
+    """
+    Recursively builds a dictionary representing the file/folder hierarchy.
+
+    :param node: The current File instance.
+    :return: A dictionary representing the node and its children.
+    """
+    # Determine the type and file extension
+    node_type = 'file' if node.is_file_type else 'folder'
+    file_extension = node.path.split('.')[-1] if node.is_file_type else 'none'
+
+    # Base structure of the node
+    tree_node = {
+        'name': node.path.split('/')[-1],  # Extract the name from the path
+        'type': node_type,
+        'filetype': file_extension,
+        'id': node.id,
+    }
+
+    # # Include content for files
+    # if node.is_file_type:
+    #     tree_node['content'] = node.content
+
+    # Recursively add children if the node is a folder
+    if not node.is_file_type:
+        children = node.children.all()
+        tree_node['children'] = [build_tree(child) for child in children]
+
+    return tree_node

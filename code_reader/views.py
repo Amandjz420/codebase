@@ -24,7 +24,7 @@ from .models import Project, File, ImageUpload
 from .tasks import start_code_reading
 from langchain.memory import ConversationSummaryBufferMemory
 from code_reader.utils import llm, call_openai_llm_without_memory, summary_maker_chain, encode_image, \
-    call_openai_llm_with_image
+    call_openai_llm_with_image, build_tree
 from code_reader.executor.main import call_executor
 from langchain.docstore.document import Document
 from code_reader.utils import call_openai_llm_without_memory
@@ -148,61 +148,7 @@ class DocumentDetailFetch(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class QueryView(APIView):
-    def post(self, request, project_id):
-        # Retrieve the project instance
-        project = get_object_or_404(Project, id=project_id)
 
-        # Extract the user's query from the request
-        user_query = request.data['query']
-        files = list(File.objects.filter(project=project).values('path', 'summary'))
-        if len(str(files)) > 50000 and not project.files_summary:
-            documents = [Document(page_content=file['summary'], metadata={"path": file['path']}) for file in files]
-            result = summary_maker_chain.invoke(documents)
-            files = result
-            project.files_summary = files
-            project.save()
-            print("Summary Results of files: ", result)
-        else:
-            files = project.files_summary
-
-        if user_query:
-            # Initialize the OpenAI API with your API key
-
-            # Prepare the prompt or input for the LLM
-            prompt = f"""
-                Project data: ##{project.name}##\n
-                Project summary: ##{project.summary}##\n
-                Files summary docs: ##{files}##\n\n
-                Based on the above given data, Answer the following questions:
-                User Query: ##{user_query}##\n\n
-                Notes for you answer: 
-                    1. if the question is about changing or adding something in the project's code,
-                     make the answer so that you will be telling what user needs to do. \n
-                    2. if the question is about some information of the code, answer it 
-                     in structured way for human to understand and in detail\n\n
-                Answer:
-            """
-            print(prompt)
-
-            try:
-
-                # Call the GPT-4o model
-                print("going to call for answer from llm")
-                answer = call_openai_llm_without_memory(prompt)
-                print(f"answer: {answer}")
-                # Extract the generated answer
-                call_executor(project.repo_path, answer, project, settings.BASE_DIR)
-                # Return the answer as a JSON response
-                return Response({'answer': answer}, status=status.HTTP_200_OK)
-
-            except Exception as e:
-                # Handle exceptions and return an error response
-                return Response({'error': str(e)}, status=500)
-
-        else:
-            # Handle the case where 'query' is not provided in the request
-            return Response({'error': 'No query provided.'}, status=400)
 
 
 class QnAView(APIView):
@@ -233,7 +179,7 @@ class QnAView(APIView):
         # Extract the user's query from the request
         user_query = request.data['query']
         print(user_query)
-        files = list(File.objects.filter(project=project).values('path', 'summary'))
+        files = list(File.objects.filter(project=project, is_file_type=True).values('path', 'summary'))
         if len(str(files)) > 50000 and not project.files_summary:
             documents = [Document(page_content=file['summary'], metadata={"path": file['path']}) for file in files]
             result = summary_maker_chain.invoke(documents)
@@ -375,7 +321,7 @@ class ExecutorView(APIView):
             conv_summary = ast.literal_eval(conversation_obj.conversation_summary)['history']
             summary_memory.save_context({"input": "conversation till now"}, {"output": conv_summary})
 
-        files = list(File.objects.filter(project=project).values('path', 'summary'))
+        files = list(File.objects.filter(project=project, is_file_type=True).values('path', 'summary'))
         if len(str(files)) > 50000 and not project.files_summary:
             documents = [Document(page_content=file['summary'], metadata={"path": file['path']}) for file in files]
             result = summary_maker_chain.invoke(documents)
@@ -437,10 +383,10 @@ class ExecutorView(APIView):
 
         return prompt, summary_memory
 
-    def call_llm(self, prompt, base64_image):
-        if base64_image:
-            return call_openai_llm_with_image(prompt, base64_image)
-        return call_openai_llm_without_memory(prompt)
+    # def call_llm(self, prompt, base64_image):
+    #     if base64_image:
+    #         return call_openai_llm_with_image(prompt, base64_image)
+    #     return call_openai_llm_without_memory(prompt)
 
     def save_interaction(self, conversation_obj, summary_memory, user_query, answer):
         Messages.objects.create(conversation=conversation_obj, user_message=user_query, ai_response=answer)
@@ -452,12 +398,24 @@ class ExecutorView(APIView):
 class ProjectFilesView(APIView):
     def get(self, request, project_id):
         project = get_object_or_404(Project, id=project_id)
-        files = File.objects.filter(project=project).values('path', 'content')
+
+        # Fetch root-level files and folders (those without a parent)
+        root_nodes = File.objects.filter(project=project, parent=None)
+
+        # Build the tree structure starting from the root nodes
+        project_tree = {
+            'name': project.name,
+            'type': 'folder',
+            'filetype': 'none',
+            'id': None,  # Root doesn't correspond to a File instance
+            'children': [build_tree(node) for node in root_nodes]
+        }
+
         return Response({
-            "project_tree_structure": project.tree_structure,
-            "files": list(files)
-        },
-        status=status.HTTP_200_OK)
+            'project_tree_structure': project_tree,
+        }, status=status.HTTP_200_OK)
+
+
 
 
 class UserDetailView(APIView):
