@@ -15,9 +15,14 @@ class Project(models.Model):
     tree_structure = models.TextField()
     zip_file = models.FileField(upload_to='uploads/', null=True, blank=True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_zip_file = self.zip_file
+
     def save(self, *args, **kwargs):
-        # Check if there's a new zip file uploaded
-        if self.zip_file:
+        from .tasks import start_code_reading
+        # Check if a new zip file has been uploaded
+        if self.zip_file and self.zip_file != self._original_zip_file:
             # Create a directory for the project in the media root
             new_repo_path = os.path.join(settings.MEDIA_ROOT, self.name)
             os.makedirs(new_repo_path, exist_ok=True)
@@ -32,11 +37,18 @@ class Project(models.Model):
                 new_repo_path = os.path.join(new_repo_path, files[0])
             if len(files) == 2 and os.path.isdir(os.path.join(new_repo_path, '__MACOSX')):
                 new_repo_path = os.path.join(new_repo_path, files[0] if files[0] != '__MACOSX' else files[1])
+
             # Update the repo_path field
             self.repo_path = new_repo_path
 
+            # Start the code reading task
+            print("starting the code reader start_code_reading")
+            start_code_reading.delay(self.id)
+
         # Call the parent class save method
         super().save(*args, **kwargs)
+        # Update the original zip file reference after saving
+        self._original_zip_file = self.zip_file
 
 class File(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)

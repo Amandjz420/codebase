@@ -178,3 +178,15 @@ SERPAPI_API_KEY = os.getenv('SERPAPI_API_KEY')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# settings.py
+
+# Redis configuration
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Adjust the Redis URL as needed
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# Optional configurations
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'  # Set to your preferred timezone
+

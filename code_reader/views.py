@@ -21,6 +21,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import Project, File, ImageUpload
+from .tasks import start_code_reading
 from langchain.memory import ConversationSummaryBufferMemory
 from code_reader.utils import llm, call_openai_llm_without_memory, summary_maker_chain, encode_image, \
     call_openai_llm_with_image
@@ -41,6 +42,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             if zip_file:
                 new_repo_path = os.path.join(settings.MEDIA_ROOT, project.name)
                 os.makedirs(new_repo_path, exist_ok=True)
+                print("extracting the zip archive")
 
                 with zipfile.ZipFile(zip_file, 'r') as zip_ref:
                     zip_ref.extractall(new_repo_path)
@@ -53,6 +55,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
                 project.repo_path = new_repo_path
                 project.save()
+                start_code_reading.delay(project.id)
+
+            return {"message": "Project created successfully", "id": project.id, "name": project.name}
+
 
 
 class ProjectDetailViewSet(APIView):
@@ -419,7 +425,7 @@ class ExecutorView(APIView):
             - **Summary of the Conversation**: {str(summary_memory.load_memory_variables({}))}
     
             ### User Query:
-            {user_query}
+            ``{user_query}``
     
             ### Notes for Your Response:
             1. If the question is about modifying or adding something in the project's code,
