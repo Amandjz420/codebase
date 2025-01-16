@@ -7,6 +7,8 @@ import base64
 from pathlib import Path
 
 from dotenv import load_dotenv
+import tiktoken
+import PyPDF2
 
 load_dotenv()
 
@@ -56,24 +58,30 @@ def get_filtered_tree(directory):
             "-L", "4",  # Limit to 4 levels
             "-I",
             ".next|node_modules|.git|venv|venv2|venv3|__pycache__|postgres_data|static|.idea|media|dist|build|*.log|*.tmp|public|__MACOSX",
-            # Exclude more unnecessary items
             "-a",  # Include hidden files and directories
             "--noreport",  # Exclude summary info (e.g., file count) to keep the output clean
             "--dirsfirst",  # Display directories before files
-            # "-f",  # Show full paths for files and directories
             directory  # Target directory
         ]
         # Execute the command and capture the output
         print(" ".join(command))
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         print(result)
-        # Check for errors
-        # if result.returncode != 0:
-        #     raise Exception(f"Error running tree command: {result.stderr}")
-
         return result.stdout
     except Exception as e:
         return str(e)
+
+
+def calculate_token_count(text, model="gpt-4o"):
+    """
+    Calculate the number of tokens in the given text using tiktoken.
+
+    :param text: The content of the file as a string.
+    :param model: The model for which to calculate tokens (e.g., 'gpt-4').
+    :return: The token count.
+    """
+    encoding = tiktoken.encoding_for_model(model)
+    return len(encoding.encode(text))
 
 
 # Helper Functions
@@ -97,17 +105,44 @@ def list_folders_in_repo(repo_path):
             folder_paths.append(os.path.join(root, dir_name))
     return folder_paths
 
-def read_file_content(file_path):
+
+def read_file_content(file_path, token_limit=6000):
+    """
+    Reads the content of a file and ensures it doesn't exceed the token limit.
+
+    :param file_path: Path to the file.
+    :param token_limit: Maximum allowed token count.
+    :return: File content if within token limit, otherwise None.
+    """
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            return file.read()
+        content = ""
+        if file_path.lower().endswith('.pdf'):
+            with open(file_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    content += page.extract_text()
+        else:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
     except UnicodeDecodeError:
         try:
             with open(file_path, 'r', encoding='latin-1') as file:
-                return file.read()
+                content = file.read()
         except UnicodeDecodeError:
             print(f"Skipping file {file_path} due to encoding issues.")
             return None
+
+    # Calculate tokens
+    token_count = calculate_token_count(content)
+    if token_count > token_limit:
+        divider = int(token_count / token_limit) + 1
+        print(f"File {file_path} exceeds token limit ({token_count} tokens). Splitting into {divider} parts.")
+        # Split the content into `divider` parts
+        part_size = len(content) // divider
+        parts = [content[i:i + part_size] for i in range(0, len(content), part_size)]
+        return f"Sample content of the file {file_path} due to token count ({token_count}) exceeding limit ({token_limit}).\n\n" + parts[0]
+
+    return content
 
 
 def call_openai_llm_with_image(prompt, base64_image):
@@ -238,16 +273,6 @@ def should_ignore_file(file_path, ignore_patterns):
     return False
 
 
-def determine_connections(file_contents):
-    connections = {}
-    for path, content in file_contents.items():
-        connections[path] = []
-        for other_path in file_contents:
-            if other_path != path and os.path.basename(other_path) in content:
-                connections[path].append(other_path)
-    return connections
-
-
 def output_analysis(file_analysis, file_connections):
     for path, analysis in file_analysis.items():
         print(f"File: {path}")
@@ -281,6 +306,7 @@ def run_file_summarizer(project_id, file_path):
         file_obj.save()
     return file_obj
 
+
 def run_code_reader(project, file_obj=None):
     """First time reading the project"""
     # Main Logic
@@ -295,8 +321,8 @@ def run_code_reader(project, file_obj=None):
     #     '.DS_Store', 'node_modules', '.next', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
     # ]
     files_to_ignore_patterns = [
-        '*.png', 'static/', 'staticFiles/', '__MACOSX/', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx',
-        'venv*', '.env', '.idea/', '.git', '*.txt', '*.mp3', 'static/', 'postgres_data/', 'public/',
+        '*.png', 'static/', 'staticFiles/', '__MACOSX/', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx',
+        'venv*', '.env', '.idea/', '.git', '*.mp3', 'static/', 'postgres_data/', 'public/',
         '.DS_Store', 'node_modules/', '.next/', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
     ]
     ignore_patterns.extend(files_to_ignore_patterns)
@@ -359,8 +385,6 @@ def run_code_reader(project, file_obj=None):
                 'is_file_type': False  # Assuming this field distinguishes between files and folders
             }
         )
-        # Check if the folder is already in the database
-        folder_object = File.objects.filter(path=folder_path, project=project).first()
 
     for path, content in file_contents.items():
         # Print the captured output

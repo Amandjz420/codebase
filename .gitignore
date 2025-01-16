@@ -1,7 +1,7 @@
 venv*
 code_test/
 extra_scripts/
-stt_files/*
+stt_files/
 *.csv
 .env
 .DS_Store
