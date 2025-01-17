@@ -40,7 +40,11 @@ CORS_ALLOW_ALL_ORIGINS = True
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
-    'https://dev.codeknot.ai'
+    'https://dev.codeknot.ai',
+    'http://localhost:5173/',
+    'http://127.0.0.1:3000/',
+    'http://127.0.0.1:5173/',
+    'http://0.0.0.0:3000',
 ]
 
 CSRF_TRUSTED_ORIGINS = ['https://*.codeknot.ai']
@@ -64,6 +68,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
