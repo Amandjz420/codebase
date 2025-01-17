@@ -14,6 +14,7 @@ class Project(models.Model):
     summary = models.TextField()
     tree_structure = models.TextField()
     zip_file = models.FileField(upload_to='uploads/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
