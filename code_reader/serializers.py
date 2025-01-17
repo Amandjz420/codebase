@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, File
+from .models import Project, File, ChangeRequested
 from django.contrib.auth.models import User
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -41,3 +41,11 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
+
+class ChangeRequestedSerializer(serializers.ModelSerializer):
+    """
+    Serializer for File model.
+    """
+    class Meta:
+        model = ChangeRequested
+        fields = '__all__'

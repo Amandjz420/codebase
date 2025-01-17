@@ -1,5 +1,5 @@
 from django.contrib import admin
-from code_reader.models import File, Project
+from code_reader.models import File, Project, ChangeRequested
 from code_reader.utils import run_code_reader, run_file_summarizer
 from code_reader.tasks import start_code_reading
 
@@ -28,5 +28,14 @@ class ProjectAdmin(admin.ModelAdmin):
     search_fields = ('repo_path', 'name')
     actions = [start_reading_code]
 
+
+class ChangeRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'project__id', 'project__name', 'description')
+    list_filter = ('project',)
+    search_fields = ('project__name', 'id')
+
+
 admin.site.register(File, FileAdmin)
 admin.site.register(Project, ProjectAdmin)
+admin.site.register(ChangeRequested, ChangeRequestAdmin)
+

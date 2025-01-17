@@ -63,3 +63,15 @@ class ImageUpload(models.Model):
     image = models.ImageField(upload_to='images/')
     extracted_content = models.TextField()
     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+class ChangeRequested(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    user_initial_query = models.TextField()
+    feedback = models.TextField(null=True, blank=True)
+    document_list = models.TextField(null=True, blank=True)
+    description = models.TextField() # Store the steps or description of the change
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+    def __str__(self):
+        return f"Change for {self.project.name} at {self.created_at}"

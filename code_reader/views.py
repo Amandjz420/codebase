@@ -20,7 +20,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import Project, File, ImageUpload
+from .models import Project, File, ImageUpload, ChangeRequested
 from .tasks import start_code_reading
 from langchain.memory import ConversationSummaryBufferMemory
 from code_reader.utils import llm, call_openai_llm_without_memory, summary_maker_chain, encode_image, \
@@ -58,7 +58,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 start_code_reading.delay(project.id)
 
             return {"message": "Project created successfully", "id": project.id, "name": project.name}
-
 
 
 class ProjectDetailViewSet(APIView):
@@ -148,9 +147,6 @@ class DocumentDetailFetch(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
-
 class QnAView(APIView):
 
     def post(self, request, project_id, conversation_id):
@@ -174,7 +170,6 @@ class QnAView(APIView):
         summary_memory.save_context({"input": "conversation till now"}, {"output": conv_summary})
         project = get_object_or_404(Project, id=project_id)
         print("here i was")
-
 
         # Extract the user's query from the request
         user_query = request.data['query']
@@ -258,7 +253,6 @@ class QnAView(APIView):
             return Response({'error': 'No query provided.'}, status=400)
 
 
-
 class ExecutorView(APIView):
     def post(self, request, project_id, conversation_id):
         # Helper function to retrieve project and conversation
@@ -268,12 +262,13 @@ class ExecutorView(APIView):
         user_query, base64_image = self.process_user_inputs(request, project)
 
         # Prepare prompt
-        prompt, summary_memory = self.prepare_prompt(project, user_query, conversation_obj)
+        prompt, summary_memory, related_file_used = self.prepare_prompt(project, user_query, conversation_obj)
 
         # Call LLM and handle execution
         try:
             response = invoke_model(prompt, SupervisorResponse, image=base64_image)
             answer = response.model_dump()
+            self.save_interaction(conversation_obj, summary_memory, user_query, answer['aiReply'])
 
             # If execution is required
             # Determine if executor is needed based on user_query
@@ -284,14 +279,21 @@ class ExecutorView(APIView):
 
             if SupervisorResponse.determine_executor_need(user_query) or answer['isExecutionRequired']:
                 print("Executor needed based on user query.")
+                change_requested_obj = ChangeRequested.objects.create(
+                    description=answer['aiReply'],
+                    project=project,
+                    user_initial_query=user_query,
+                    document_list=str(related_file_used),
+                )
+                print(f"change_requested_obj: {change_requested_obj}")
                 executor_prompt = f"""
                                 User Initial Request: \n```{user_query}``\n\n
                                 And Code Reader suggested: \n###{answer['aiReply']}###\n\n
                             """
                 call_executor(project.repo_path, executor_prompt, project, settings.BASE_DIR, base64_image)
+                return Response({'answer': answer['aiReply'], "change_request_id": change_requested_obj}, status=200)
 
-            self.save_interaction(conversation_obj, summary_memory,user_query, answer['aiReply'])
-            return Response({'answer': answer}, status=200)
+            return Response({'answer': answer['aiReply']}, status=200)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 
@@ -317,7 +319,6 @@ class ExecutorView(APIView):
         summary_memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=500)
         conv_summary = "No conversation yet\n"
         if 'history' in conversation_obj.conversation_summary:
-
             conv_summary = ast.literal_eval(conversation_obj.conversation_summary)['history']
             summary_memory.save_context({"input": "conversation till now"}, {"output": conv_summary})
 
@@ -349,6 +350,7 @@ class ExecutorView(APIView):
             file_paths = response.model_dump()['files']
             print('file_paths retrieved: ')
             print(file_paths)
+            related_file_used = file_paths
             code_context = File.objects.filter(path__in=file_paths).values('path', 'content', 'summary')
             if len(str(code_context)) > 50000:
                 code_context = File.objects.filter(path__in=file_paths).values('path', 'content')
@@ -356,6 +358,7 @@ class ExecutorView(APIView):
             print('code_context retrieved')
         else:
             print('no code_context before, yet to build the project')
+            related_file_used = []
         # print(code_context)
 
         # Prepare the prompt or input for the LLM
@@ -381,7 +384,7 @@ class ExecutorView(APIView):
             ### Response:
         """
 
-        return prompt, summary_memory
+        return prompt, summary_memory, related_file_used
 
     # def call_llm(self, prompt, base64_image):
     #     if base64_image:
@@ -416,10 +419,9 @@ class ProjectFilesView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-
-
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
         token_key = request.headers.get('Authorization').split(" ")[1]
         token = Token.objects.get(key=token_key)
@@ -431,3 +433,50 @@ class UserDetailView(APIView):
             'last_name': user.last_name
         }
         return Response(user_details, status=status.HTTP_200_OK)
+
+
+class ChangeRequestedView(APIView):
+    def get(self, request, change_request_id):
+        change_requested_obj = ChangeRequested.objects.filter(id=change_request_id)
+        change_data = {
+            'document_list': change_requested_obj.rel,
+            'description': change_requested_obj.description,
+            'created_at': change_requested_obj.created_at
+        }
+        return Response({'changes': change_data}, status=200)
+
+
+class ChangeRequestedFeedbackView(APIView):
+    def post(self, request, change_request_id):
+        change_request_feedback = request.data.get('change_request_feedback')
+        if not change_request_feedback:
+            return Response({"error", "feedback is missing"}, status=status.HTTP_400_BAD_REQUEST)
+        change_requested_obj = ChangeRequested.objects.get(id=change_request_id)
+        if not change_requested_obj:
+            return Response({"error", f"no change request object present for the id: {change_request_id}"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        # Prepare prompt for OpenAI LLM
+        #FIXME: have to support for fetching the right files too and passing it to context
+        prompt = (
+            f"User's initial query: {change_requested_obj.user_initial_query}\n"
+            f"Previous description: {change_requested_obj.description}\n"
+            f"Feedback: {change_request_feedback}\n\n"
+            f"Refine the description based on the feedback and provide a better version."
+        )
+        # Call OpenAI function
+        refined_content = call_openai_llm_without_memory(prompt)
+
+        # Save the refined user feedback and content back to the database
+        change_requested_obj.feedback = change_request_feedback
+        change_requested_obj.description = refined_content
+
+        change_requested_obj.save()
+
+        # Return the refined content as the response
+        return Response(
+            {
+                "message": "Feedback saved and description refined successfully.",
+                "refined_description": refined_content,
+            },
+            status=200
+        )

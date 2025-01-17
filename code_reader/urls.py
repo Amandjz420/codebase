@@ -3,7 +3,7 @@ from django.urls import path, include
 from .views import (ProjectViewSet, FileViewSet, login_view,
                     DocumentDetailFetch, ExecutorView,
                     ProjectDetailViewSet, ProjectListViewSet, QnAView,
-                    ProjectFilesView, UserDetailView)
+                    ProjectFilesView, UserDetailView, ChangeRequestedView, ChangeRequestedFeedbackView)
 from conversation.views import MessagesDetailViewSet
 
 router = DefaultRouter()
@@ -19,5 +19,8 @@ urlpatterns = [
     path('projects/<int:project_id>/conversation/<str:conversation_id>/executor/', ExecutorView.as_view(), name='executor_view'),
     path('conversation/<str:conversation_id>/', MessagesDetailViewSet.as_view(), name='get_messages'),
     path('projects/<int:project_id>/files/', ProjectFilesView.as_view(), name='project_files'),
-    path('user/details/', UserDetailView.as_view(), name='user-details')
+    path('user/details/', UserDetailView.as_view(), name='user-details'),
+    path('change-request/<int:change_request_id>/', ChangeRequestedView.as_view(), name='change-request-detail'),
+    path('change-request/<int:change_request_id>/feedback/', ChangeRequestedFeedbackView.as_view(), name='change-request-feedback'),
+
 ]
