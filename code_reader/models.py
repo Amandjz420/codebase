@@ -15,6 +15,7 @@ class Project(models.Model):
     tree_structure = models.TextField()
     zip_file = models.FileField(upload_to='uploads/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -59,11 +60,16 @@ class File(models.Model):
     analysis = models.TextField()
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     is_file_type = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 class ImageUpload(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='images/')
     extracted_content = models.TextField()
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class ChangeRequested(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
@@ -72,6 +78,7 @@ class ChangeRequested(models.Model):
     document_list = models.TextField(null=True, blank=True)
     description = models.TextField() # Store the steps or description of the change
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
     def __str__(self):
