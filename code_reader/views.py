@@ -285,7 +285,7 @@ class ExecutorView(APIView):
                     user_initial_query=user_query,
                     document_list=str(related_file_used),
                 )
-                print(f"change_requested_obj: {change_requested_obj}")
+                print(f"change_requested_obj: {change_requested_obj.id}")
                 executor_prompt = f"""
                                 User Initial Request: \n```{user_query}``\n\n
                                 And Code Reader suggested: \n###{answer['aiReply']}###\n\n

@@ -318,7 +318,7 @@ def run_code_reader(project, file_obj=None):
 
     files_to_ignore_patterns = [
         '*.png', 'static/', 'staticFiles/', '__MACOSX/', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx',
-        'venv*', '.env', '.idea/', '.git', '*.mp3', 'static/', 'postgres_data/', 'public/', '.vite/',
+        'venv/', 'venv2/', 'venv3/', '.env', '.idea/', '.git', '*.mp3', 'static/', 'postgres_data/', 'public/', '.vite/',
         '.DS_Store', 'node_modules/', '.next/', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
     ]
     ignore_patterns.extend(files_to_ignore_patterns)
