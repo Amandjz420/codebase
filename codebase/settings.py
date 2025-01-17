@@ -47,6 +47,15 @@ CORS_ALLOWED_ORIGINS = [
     'http://0.0.0.0:3000',
 ]
 
+CORS_ALLOW_METHODS = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+]
+
 CSRF_TRUSTED_ORIGINS = ['https://*.codeknot.ai']
 
 # Application definition
