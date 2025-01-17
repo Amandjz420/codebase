@@ -330,7 +330,7 @@ class ExecutorView(APIView):
             project.files_summary = files
             project.save()
             print("Summary Results of files: ", result)
-        else:
+        elif project.files_summary:
             files = project.files_summary
         code_context = "no files present, yet to build the project"
         if user_query and files:
