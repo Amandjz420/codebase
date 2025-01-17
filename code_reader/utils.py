@@ -374,17 +374,20 @@ def run_code_reader(project, file_obj=None):
             parent_folder = None
         else:
             parent_folder = File.objects.filter(path=str(parent_folder_path), project=project).first()
+        folder_structure = get_filtered_tree(folder_path)
         folder_obj, created = File.objects.update_or_create(
             path=folder_path,
             project=project,
             defaults={
                 'analysis': '',
                 'summary': '',
-                'content': '',  # Folders may not have content
+                'content': str(folder_structure),  # Folders may not have content
                 'parent': parent_folder,
                 'is_file_type': False  # Assuming this field distinguishes between files and folders
             }
         )
+        if created:
+            print(f"Folder {folder_obj.path} created successfully")
 
     for path, content in file_contents.items():
         # Print the captured output
