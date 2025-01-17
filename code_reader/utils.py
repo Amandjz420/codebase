@@ -315,14 +315,10 @@ def run_code_reader(project, file_obj=None):
     local_files = list_files_in_repo(repo_path)
     local_folders = list_folders_in_repo(repo_path)
     ignore_patterns = read_ignore_patterns(repo_path)
-    # files_to_ignore_patterns = [
-    #     '*.png', 'static', '*.json', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx', 'media',
-    #     'venv*', '.env', '.idea/', '.git', '*.txt', '*.mp3', '/static/', '/postgres_data/',
-    #     '.DS_Store', 'node_modules', '.next', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
-    # ]
+
     files_to_ignore_patterns = [
         '*.png', 'static/', 'staticFiles/', '__MACOSX/', '__pycache__', 'db.sqlite3', '.idea', '*.xlsx',
-        'venv*', '.env', '.idea/', '.git', '*.mp3', 'static/', 'postgres_data/', 'public/',
+        'venv*', '.env', '.idea/', '.git', '*.mp3', 'static/', 'postgres_data/', 'public/', '.vite/',
         '.DS_Store', 'node_modules/', '.next/', '*.ttf', '*.jpeg', '*.svg', '*.ico', '*.woff', '*.d.ts'
     ]
     ignore_patterns.extend(files_to_ignore_patterns)
