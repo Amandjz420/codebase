@@ -524,10 +524,6 @@ class ChangeRequestedFeedbackView(APIView):
 
 class ChangeRequestedPlanView(APIView):
     def get(self, request, change_request_id):
-        change_request_feedback = request.data.get('change_request_feedback')
-
-        if not change_request_feedback:
-            return Response({"error", "feedback is missing"}, status=status.HTTP_400_BAD_REQUEST)
         change_requested_obj = ChangeRequested.objects.get(id=change_request_id)
         if not change_requested_obj:
             return Response({"error", f"no change request object present for the id: {change_request_id}"},
