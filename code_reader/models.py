@@ -83,3 +83,24 @@ class ChangeRequested(models.Model):
 
     def __str__(self):
         return f"Change for {self.project.name} at {self.created_at}"
+
+class Plan(models.Model):
+    change_request = models.ForeignKey("ChangeRequested", on_delete=models.CASCADE, related_name="plans")
+    session_name = models.TextField()
+    firebase_chat_id = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Plan for Change Request ID {self.change_request.id}"
+
+
+class Step(models.Model):
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name="steps")
+    title = models.CharField(max_length=255)
+    detailed_description = models.TextField()
+    pseudo_code = models.TextField(null=True, blank=True)
+    code_snippet = models.TextField(null=True, blank=True)
+    order = models.PositiveIntegerField(default=0)  # For step ordering
+
+    def __str__(self):
+        return f"Step {self.order}: {self.title}"

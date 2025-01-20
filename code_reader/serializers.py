@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, File, ChangeRequested
+from .models import Project, File, ChangeRequested, Step, Plan
 from django.contrib.auth.models import User
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -49,3 +49,16 @@ class ChangeRequestedSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChangeRequested
         fields = '__all__'
+
+
+class StepSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Step
+        fields = ['id', 'title', 'detailed_description', 'pseudo_code', 'code_snippet', 'order', 'plan']
+
+
+class PlanSerializer(serializers.ModelSerializer):
+    steps = StepSerializer(many=True, read_only=True)  # Nested serialization for steps
+    class Meta:
+        model = Plan
+        fields = ['id', 'change_request', 'session_name', 'created_at', 'steps']

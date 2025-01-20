@@ -12,6 +12,7 @@ from code_reader.executor.outputparser import PlannerResponse
 from code_reader.executor.tools import code_editor, terminal_executor, need_user_input, update_file_summary, read_file_content, \
     search_web_browser, update_project_root_dir_and_tree_structure, starting_new_tmux_session_for_running_service, wait_for_some_time
 from code_reader.executor.utils import llm, invoke_model
+from code_reader.firebase import write_in_executor_firestore
 from code_reader.models import Project
 
 
@@ -28,6 +29,7 @@ class AgentState(TypedDict):
     project_id: str
     project_summary: str
     reference_file: str
+    firebase_chat_id: str
 
 # Initialize memory
 summary_memory = ConversationSummaryBufferMemory(
@@ -86,9 +88,7 @@ def get_plan_title_array(plan):
         plan_title_array.append(step["title"])
     return plan_title_array
 
-def planner(state: AgentState) -> AgentState:
-    project_summary = state.get("project_summary", "")
-    user_query = state.get("user_query", "")
+def create_plan(user_query, project_summary):
     prompt = (
         f"The user wants the following to be done:\n\n"
         f"**User Query:**\n##{user_query}##\n\n"
@@ -96,7 +96,8 @@ def planner(state: AgentState) -> AgentState:
         "1. Break down the user's requested task into a detailed sequence of steps to achieve the given goal.\n"
         "2. Each step should be described in simple, clear language without omitting any crucial information.\n"
         "3. If the user query references specific files or paths, use these exact paths in the steps.\n"
-        "4. Ensure the steps are detailed enough so that the executor agent, using its available tools, "
+        "4. Dont test or run the project, unless user explicitly mentions it.\n"
+        "5. Ensure the steps are detailed enough so that the executor agent, using its available tools, "
         "can follow them without additional assumptions.\n\n"
         "Available tools for execution (for reference):\n"
         f"{tools_info}\n\n"
@@ -105,49 +106,36 @@ def planner(state: AgentState) -> AgentState:
     )
 
     response = invoke_model(prompt, PlannerResponse)
-    # response = invoke_model(prompt, PlannerResponse)
     response_dict = response.model_dump()
 
     plan = response_dict['steps']
     print("plans :", plan)
-    # while True:
-    #     print(plan)
-    #     for i in range(len(plan)):
-    #         print(f"Step {i+1}: {plan[i]['title']}")
-    #         print(f"Flow of planning: {plan[i]['psuedo_code']}")
-    #         # plan.append(response["steps"][i])
-    #     user_feedback = input("Does the plan look correct? (yes/no): ")
-    #     if user_feedback.lower() == 'yes':
-    #         break
-    #     elif user_feedback.lower() == 'no':
-    #         feedback = input("Please provide feedback on what needs to be changed: ")
-    #         prompt = (
-    #             f"The user provided the following feedback on the plan:\n\n"
-    #             f"User's Feedback on Plan:\n##{feedback}##\n\n"
-    #             f"User's Query:\n##{user_query}##\n\n"
-    #             f"Previous Plan:\n##{str(plan)}##\n\n"
-    #             "Update the plan based on the user's feedback. Make sure to:\n"
-    #             "- Keep the steps clear, detailed, and aligned with the user's goal.\n"
-    #             "- If multiple files are mentioned in one step, split them into separate steps so each file is handled individually.\n"
-    #             "- Maintain the requirement not to use tools to update file information before committing changes, unless explicitly requested.\n"
-    #             "- Continue to provide a sequence of steps that the executor can follow without assumptions.\n\n"
-    #             "Do not omit any crucial information needed to achieve the user's objectives.\n"
-    #         )
-    #         response = invoke_model(prompt, PlannerResponse, image=state.get("reference_file", ""))
-    #         plan = response.model_dump()['steps']
-    #     else:
-    #         print("Invalid input. Please enter 'yes' or 'no'.")
+    return plan
+
+def planner(state: AgentState) -> AgentState:
+    project_summary = state.get("project_summary", "")
+    user_query = state.get("user_query", "")
+    firebase_chat_id = state.get("firebase_chat_id", "")
+    print("in planner phase")
+    plan = create_plan(user_query, project_summary)
 
     state.update({
         "plan": plan,
         "current_step": 0,
         "success": False
     })
+    write_in_executor_firestore(firebase_chat_id, data={
+        "plan_created": plan,
+        "plan": plan,
+        "current_step": 0,
+    })
     return state
 
 def executor(state: AgentState) -> AgentState:
     plan = state["plan"]
     current_step = state["current_step"]
+    firebase_chat_id = state.get("firebase_chat_id", "")
+
 
     if current_step < len(plan):
         step_description = plan[current_step]
@@ -197,6 +185,10 @@ def executor(state: AgentState) -> AgentState:
             {"input": f"{str(step_description)}", "summary": summary, "user_query": state["user_query"]}
         )
         print("Agent Result:", result['output'])
+        write_in_executor_firestore(firebase_chat_id, data={
+            f"Agent Step {current_step} Execution": result['input'],
+            f"Agent Step {current_step} Execution's Result": result['output'],
+        })
         # print("Current working directory", os.getcwd())
         # Store the execution result in the state
         execution_result = result
@@ -217,6 +209,7 @@ def feedback_analyzer(state: AgentState) -> AgentState:
     print("Feedback Analyzer ")
     execution_result = state.get("execution_result", "")
     current_step = state.get("current_step", 0)
+    firebase_chat_id = state.get("firebase_chat_id", "")
     plan = state.get("plan", [])
 
     if not execution_result:
@@ -282,6 +275,11 @@ def feedback_analyzer(state: AgentState) -> AgentState:
         state["plan"] = plan
 
     state["current_step"] = current_step + 1
+    write_in_executor_firestore(firebase_chat_id, data={
+        "current_step": current_step + 1,
+        f"Feedback Analyzer Response at {current_step} result's further step": further_steps,
+        "plan": plan,
+    })
     return state
 
 def completion_check(state: AgentState) -> Union[str, Literal[END]]:

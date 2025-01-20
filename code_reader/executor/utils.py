@@ -188,11 +188,12 @@ def monitor_log_file(log_file, output_buffer_arr):
                 time.sleep(0.1)
 
 
-def start_tmux_session_with_logging(directory, project_name):
+def start_tmux_session_with_logging(directory, project_name, session_name=""):
     global output_buffer
     output_buffer = []
     # Set the working directory
-    session_name = generate_session_name(project_name)
+    if not session_name:
+        session_name = generate_session_name(project_name)
     # Start the tmux session
     try:
         start_tmux_session(session_name, directory)
@@ -201,13 +202,13 @@ def start_tmux_session_with_logging(directory, project_name):
         return
 
     time.sleep(2)  # Give some time for tmux session to start
-
+    print("Starting tmux session with", session_name)
     # Create a temporary log file to capture the pane output
     log_file = tempfile.NamedTemporaryFile(delete=False)
     log_file.close()
 
     # Start logging the tmux pane output
-    create_tmux_pane_logger(SESSION_NAME, log_file.name)
+    create_tmux_pane_logger(session_name, log_file.name)
 
     # Start monitoring the log file in a separate thread
     monitor_thread = threading.Thread(target=monitor_log_file, args=(log_file.name, output_buffer), daemon=True)

@@ -1,3 +1,4 @@
+import json
 import os
 import zipfile
 import ast
@@ -8,9 +9,10 @@ from rest_framework import viewsets, permissions
 from django.conf import settings
 from django.contrib.auth.models import User
 from conversation.models import Conversation, Messages
+from .executor.agent_functions import create_plan
 from .executor.utils import invoke_model
 from .executor.outputparser import FilepathResponse, SupervisorResponse
-from .serializers import ProjectSerializer, FileSerializer, DocumentDetailFetchSerializer
+from .serializers import ProjectSerializer, FileSerializer, DocumentDetailFetchSerializer, StepSerializer
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
@@ -20,12 +22,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import Project, File, ImageUpload, ChangeRequested
+from .models import Project, File, ImageUpload, ChangeRequested, Plan, Step
 from .tasks import start_code_reading
 from langchain.memory import ConversationSummaryBufferMemory
 from code_reader.utils import llm, call_openai_llm_without_memory, summary_maker_chain, encode_image, \
     call_openai_llm_with_image, build_tree
-from code_reader.executor.main import call_executor
+from code_reader.executor.main import call_executor, call_executor_with_plan
 from langchain.docstore.document import Document
 from code_reader.utils import call_openai_llm_without_memory
 
@@ -95,6 +97,14 @@ class FileViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return File.objects.filter(project__user=self.request.user)
+
+class FileDetailViewSet(APIView):
+    queryset = File.objects.all()
+    serializer_class = FileSerializer
+    def get(self, request, file_id):
+        file = get_object_or_404(File, id=file_id)
+        file_data = FileSerializer(file).data
+        return Response(file_data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -285,13 +295,23 @@ class ExecutorView(APIView):
                     user_initial_query=user_query,
                     document_list=str(related_file_used),
                 )
+                session_name = f"CR{change_requested_obj.id}_session_executor"
+                firebase_chat_id = f"CR{change_requested_obj.id}_session_executor"
                 print(f"change_requested_obj: {change_requested_obj.id}")
                 executor_prompt = f"""
                                 User Initial Request: \n```{user_query}``\n\n
                                 And Code Reader suggested: \n###{answer['aiReply']}###\n\n
                             """
-                call_executor(project.repo_path, executor_prompt, project, settings.BASE_DIR, base64_image)
-                return Response({'answer': answer['aiReply'], "change_request_id": change_requested_obj}, status=200)
+                call_executor(
+                    directory=project.repo_path,
+                    user_request=executor_prompt,
+                    project_obj=project,
+                    BASE_DIR=settings.BASE_DIR,
+                    reference_file=base64_image,
+                    session_name=session_name,
+                    firebase_chat_id=firebase_chat_id
+                )
+                return Response({'answer': answer['aiReply'], "change_request_id": change_requested_obj.id}, status=200)
 
             return Response({'answer': answer['aiReply']}, status=200)
         except Exception as e:
@@ -418,6 +438,11 @@ class ProjectFilesView(APIView):
             'project_tree_structure': project_tree,
         }, status=status.HTTP_200_OK)
 
+class ProjectReadFilesView(APIView):
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        start_code_reading.delay(project.id)
+
 
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -427,6 +452,7 @@ class UserDetailView(APIView):
         token = Token.objects.get(key=token_key)
         user = token.user
         user_details = {
+            'id': user.id,
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name,
@@ -439,7 +465,7 @@ class ChangeRequestedView(APIView):
     def get(self, request, change_request_id):
         change_requested_obj = ChangeRequested.objects.filter(id=change_request_id)
         change_data = {
-            'document_list': change_requested_obj.rel,
+            'document_list': change_requested_obj.document_list,
             'description': change_requested_obj.description,
             'created_at': change_requested_obj.created_at
         }
@@ -457,7 +483,19 @@ class ChangeRequestedFeedbackView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
         # Prepare prompt for OpenAI LLM
         #FIXME: have to support for fetching the right files too and passing it to context
+        document_list = change_requested_obj.document_list
+        # Convert the string to a Python list
+        files_content = []
+        try:
+            document_list_array = json.loads(document_list)
+            if document_list_array:
+                files_content = File.objects.filter(path__in=document_list_array).values('path', 'content')
+            print(document_list_array)
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+
         prompt = (
+            f"Related file content: {files_content}\n\n"
             f"User's initial query: {change_requested_obj.user_initial_query}\n"
             f"Previous description: {change_requested_obj.description}\n"
             f"Feedback: {change_request_feedback}\n\n"
@@ -469,7 +507,6 @@ class ChangeRequestedFeedbackView(APIView):
         # Save the refined user feedback and content back to the database
         change_requested_obj.feedback = change_request_feedback
         change_requested_obj.description = refined_content
-
         change_requested_obj.save()
 
         # Return the refined content as the response
@@ -480,3 +517,101 @@ class ChangeRequestedFeedbackView(APIView):
             },
             status=200
         )
+
+
+class ChangeRequestedPlanView(APIView):
+    def get(self, request, change_request_id):
+        change_request_feedback = request.data.get('change_request_feedback')
+
+        if not change_request_feedback:
+            return Response({"error", "feedback is missing"}, status=status.HTTP_400_BAD_REQUEST)
+        change_requested_obj = ChangeRequested.objects.get(id=change_request_id)
+        if not change_requested_obj:
+            return Response({"error", f"no change request object present for the id: {change_request_id}"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        # Prepare prompt for OpenAI LLM
+        user_query = change_requested_obj.description
+        document_list = change_requested_obj.document_list
+        # Convert the string to a Python list
+        files_content = []
+        try:
+            document_list_array = json.loads(document_list)
+            if document_list_array:
+                files_content = File.objects.filter(path__in=document_list_array).values('path', 'content')
+            print(document_list_array)
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+
+        project_summary = (f"the project sumamry: \n{change_requested_obj.project.summary}\n\n "
+                           f"The related document contents are: \n{files_content} ")
+        plans = create_plan(user_query, project_summary)
+        # FIXME: have to add logic for session_name and firebase_id
+        session_name = f"CR{change_requested_obj.id}_session_executor"
+        firebase_chat_id = f"CR{change_requested_obj.id}_session_executor"
+        plan_object, created = Plan.objects.get_or_create(change_request=change_requested_obj,
+                                                          defaults={
+                                                              "session_name": session_name,
+                                                              "firebase_chat_id": firebase_chat_id
+                                                          })
+        if not created:
+            Step.objects.filter(plan=plan_object).delete()
+        for order, step in enumerate(plans):
+            Step.objects.create(order=order, plan=plan_object, **step)
+
+        return Response(
+            {
+                "message": f"Plan created and with the session_name: {session_name} ",
+                "steps": plans,
+                "session_name": session_name,
+                "firebase_chat_id": firebase_chat_id
+            },
+            status=200
+        )
+
+class PlanFeedbackView(APIView):
+
+    def post(self, request, plan_id):
+        plan_obj = Plan.objects.get(id=plan_id)
+        plan_feedback = request.data.get('plan_feedback')
+        change_requested_obj = plan_obj.change_request
+        steps = Step.objects.filter(plan=plan_obj)
+        steps_data = StepSerializer(steps, many=True).data
+        # Prepare prompt for OpenAI LLM
+
+        # prompt = (
+        #     f"User's initial query: {change_requested_obj.user_initial_query}\n"
+        #     f"Previous steps: {change_requested_obj.description}\n"
+        #     f"Feedback: {change_request_feedback}\n\n"
+        #     f"Refine the description based on the feedback and provide a better version."
+        # )
+        #
+        # FIXME:  have to add the logic
+
+
+
+class PlanExecutorView(APIView):
+
+    def get(self, request, plan_id):
+        plan_object = Plan.objects.get(id=plan_id)
+        change_requested_obj = plan_object.change_request
+        project = change_requested_obj.project
+        session_name = plan_object.session_name
+        firebase_chat_id = plan_object.firebase_chat_id
+        steps = Step.objects.filter(plan=plan_object).order_by('-order')
+        plans = StepSerializer(steps, many=True).data
+        #  Reference file ????
+        result = call_executor_with_plan(
+            directory=project.repo_path,
+            user_request=change_requested_obj.user_initial_query,
+            plan=plans,
+            project_obj=project,
+            BASE_DIR=settings.BASE_DIR,
+            reference_file='',
+            session_name=session_name,
+            firebase_chat_id=firebase_chat_id
+        )
+
+        if result == "done":
+            return Response({"message": "Execution request by the user is completed"}, status.HTTP_200_OK)
+        else:
+            return Response({"message": f"Execution got halted with the following message: {result}"}, status.HTTP_500_INTERNAL_SERVER_ERROR)
