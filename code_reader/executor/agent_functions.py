@@ -96,7 +96,7 @@ def create_plan(user_query, project_summary):
         "1. Break down the user's requested task into a detailed sequence of steps to achieve the given goal.\n"
         "2. Each step should be described in simple, clear language without omitting any crucial information.\n"
         "3. If the user query references specific files or paths, use these exact paths in the steps.\n"
-        "4. Dont test or run the project, unless user explicitly mentions it.\n"
+        "4. Dont add steps to test or run the application, unless user explicitly mentions it.\n"
         "5. Ensure the steps are detailed enough so that the executor agent, using its available tools, "
         "can follow them without additional assumptions.\n\n"
         "Available tools for execution (for reference):\n"

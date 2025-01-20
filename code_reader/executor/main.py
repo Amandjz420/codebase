@@ -144,8 +144,7 @@ def call_executor_with_plan(directory, user_request, plan, project_obj, BASE_DIR
 
     # === Create and Compile Workflow ===
     workflow = StateGraph(AgentState)
-    workflow.set_entry_point("planner")
-    workflow.add_node("planner", planner)
+    workflow.set_entry_point("executor")
     workflow.add_node("executor", executor)
     workflow.add_node("feedback_analyzer", feedback_analyzer)
     # workflow.add_node("completion_check", completion_check)

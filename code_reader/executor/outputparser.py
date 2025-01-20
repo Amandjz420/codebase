@@ -8,12 +8,12 @@ class CommandResponse(BaseModel):
 class Step(BaseModel):
     title: str = Field(description="summarizing the step in 1-2 lines")
     detailed_description: str = Field(description="=`detailed_description` with all necessary details.")
-    psuedo_code: str = Field(description="`psuedo_code` field outlining the flow if code writing is involved.")
+    pseudo_code: str = Field(description="`pseudo_code` field outlining the flow if code writing is involved.")
     code_snippet: str = Field(description="`code_snippet` field with a concrete code example if code writing is involved.")
 
 class PlannerResponse(BaseModel):
     steps: List[Step] = Field(description="A list of detailed steps explaining what needs to be done without missing any details. "
-                                          "If code is not relevant for a particular step, leave `psuedo_code` and `code_snippet` fields empty."
+                                          "If code is not relevant for a particular step, leave `pseudo_code` and `code_snippet` fields empty."
                                           "Make sure no essential details are missed. Provide a comprehensive, logically ordered plan.")
 
 class CodeUpdateResponse(BaseModel):

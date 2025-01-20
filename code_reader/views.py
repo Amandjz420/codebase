@@ -490,7 +490,7 @@ class ChangeRequestedFeedbackView(APIView):
         # Convert the string to a Python list
         files_content = []
         try:
-            document_list_array = json.loads(document_list)
+            document_list_array = ast.literal_eval(document_list)
             if document_list_array:
                 files_content = File.objects.filter(path__in=document_list_array).values('path', 'content')
             print(document_list_array)
@@ -534,7 +534,7 @@ class ChangeRequestedPlanView(APIView):
         # Convert the string to a Python list
         files_content = []
         try:
-            document_list_array = json.loads(document_list)
+            document_list_array = ast.literal_eval(document_list)
             if document_list_array:
                 files_content = File.objects.filter(path__in=document_list_array).values('path', 'content')
             print(document_list_array)
@@ -555,7 +555,16 @@ class ChangeRequestedPlanView(APIView):
         if not created:
             Step.objects.filter(plan=plan_object).delete()
         for order, step in enumerate(plans):
-            Step.objects.create(order=order, plan=plan_object, **step)
+            print("order",order)
+            print("step",step)
+            Step.objects.create(
+                order=order,
+                plan=plan_object,
+                title=step['title'],
+                detailed_description=step['detailed_description'],
+                pseudo_code=step['pseudo_code'],
+                code_snippet=step['code_snippet']
+            )
 
         return Response(
             {
@@ -598,6 +607,7 @@ class PlanExecutorView(APIView):
         firebase_chat_id = plan_object.firebase_chat_id
         steps = Step.objects.filter(plan=plan_object).order_by('-order')
         plans = StepSerializer(steps, many=True).data
+
         #  Reference file ????
         result = call_executor_with_plan(
             directory=project.repo_path,
