@@ -442,6 +442,9 @@ class ProjectReadFilesView(APIView):
     def get(self, request, project_id):
         project = get_object_or_404(Project, id=project_id)
         start_code_reading.delay(project.id)
+        return Response({
+            'message': "started reading the project: {}".format(project.name),
+        }, status=status.HTTP_200_OK)
 
 
 class UserDetailView(APIView):
