@@ -476,7 +476,6 @@ class ChangeRequestedView(APIView):
     def get(self, request, change_request_id):
         change_requested_obj = ChangeRequested.objects.filter(id=change_request_id)
         change_data = {
-            'document_list': change_requested_obj.document_list,
             'description': change_requested_obj.description,
             'created_at': change_requested_obj.created_at
         }
