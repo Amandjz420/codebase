@@ -577,6 +577,7 @@ class ChangeRequestedPlanView(APIView):
         return Response(
             {
                 "message": f"Plan created and with the session_name: {session_name} ",
+                "plan_id": plan_object.id,
                 "steps": plans,
                 "session_name": session_name,
                 "firebase_chat_id": firebase_chat_id
