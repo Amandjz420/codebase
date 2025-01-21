@@ -40,6 +40,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             project = serializer.save()
             zip_file = project.zip_file
+            if settings.MEDIA_ROOT not in project.repo_path:
+                new_repo_path = os.path.join(settings.MEDIA_ROOT, project.name)
+                os.makedirs(new_repo_path, exist_ok=True)
+                print("extracting the zip archive")
+                project.repo_path = new_repo_path
+                project.save()
 
             if zip_file:
                 new_repo_path = os.path.join(settings.MEDIA_ROOT, project.name)
@@ -269,7 +275,7 @@ class ExecutorView(APIView):
         project, conversation_obj = self.retrieve_project_and_conversation(project_id, conversation_id)
 
         # Process user inputs
-        user_query, base64_image = self.process_user_inputs(request, project)
+        user_query, base64_image, executor_run = self.process_user_inputs(request, project)
 
         # Prepare prompt
         prompt, summary_memory, related_file_used = self.prepare_prompt(project, user_query, conversation_obj)
@@ -298,19 +304,20 @@ class ExecutorView(APIView):
                 session_name = f"CR{change_requested_obj.id}_session_executor"
                 firebase_chat_id = f"CR{change_requested_obj.id}_session_executor"
                 print(f"change_requested_obj: {change_requested_obj.id}")
-                executor_prompt = f"""
-                                User Initial Request: \n```{user_query}``\n\n
-                                And Code Reader suggested: \n###{answer['aiReply']}###\n\n
-                            """
-                call_executor(
-                    directory=project.repo_path,
-                    user_request=executor_prompt,
-                    project_obj=project,
-                    BASE_DIR=settings.BASE_DIR,
-                    reference_file=base64_image,
-                    session_name=session_name,
-                    firebase_chat_id=firebase_chat_id
-                )
+                if executor_run:
+                    executor_prompt = f"""
+                                    User Initial Request: \n```{user_query}``\n\n
+                                    And Code Reader suggested: \n###{answer['aiReply']}###\n\n
+                                """
+                    call_executor(
+                        directory=project.repo_path,
+                        user_request=executor_prompt,
+                        project_obj=project,
+                        BASE_DIR=settings.BASE_DIR,
+                        reference_file=base64_image,
+                        session_name=session_name,
+                        firebase_chat_id=firebase_chat_id
+                    )
                 return Response({'answer': answer['aiReply'], "change_request_id": change_requested_obj.id}, status=200)
 
             return Response({'answer': answer['aiReply']}, status=200)
@@ -329,10 +336,11 @@ class ExecutorView(APIView):
     def process_user_inputs(self, request, project):
         user_query = request.data.get('query')
         user_file = request.data.get('file', "")
+        executor_run = request.data.get('executor_run', False)
         base64_image = encode_image(user_file) if user_file else ""
         if user_file:
             ImageUpload.objects.create(project=project, image=user_file, extracted_content="")
-        return user_query, base64_image
+        return user_query, base64_image, executor_run
 
     def prepare_prompt(self, project, user_query, conversation_obj):
         # Prepare conversation history

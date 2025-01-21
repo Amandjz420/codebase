@@ -23,6 +23,13 @@ class Project(models.Model):
 
     def save(self, *args, **kwargs):
         from .tasks import start_code_reading
+
+        if settings.MEDIA_ROOT not in self.repo_path:
+            new_repo_path = os.path.join(settings.MEDIA_ROOT, self.name)
+            os.makedirs(new_repo_path, exist_ok=True)
+            print("extracting the zip archive")
+            self.repo_path = new_repo_path
+
         # Check if a new zip file has been uploaded
         if self.zip_file and self.zip_file != self._original_zip_file:
             # Create a directory for the project in the media root
