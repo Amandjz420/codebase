@@ -141,7 +141,7 @@ def executor(state: AgentState) -> AgentState:
         step_description = plan[current_step]
         print(f"\nExecuting Step {current_step + 1}/{len(plan)}: {str(step_description)}\n")
 
-        tools = [code_editor, terminal_executor, need_user_input, update_project_root_dir_and_tree_structure,
+        tools = [code_editor, terminal_executor, update_project_root_dir_and_tree_structure,
                  update_file_summary, search_web_browser, starting_new_tmux_session_for_running_service,
                  wait_for_some_time, read_file_content]
 

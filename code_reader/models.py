@@ -24,7 +24,7 @@ class Project(models.Model):
     def save(self, *args, **kwargs):
         from .tasks import start_code_reading
 
-        if settings.MEDIA_ROOT not in self.repo_path:
+        if len(self.repo_path) < 5:
             new_repo_path = os.path.join(settings.MEDIA_ROOT, self.name)
             os.makedirs(new_repo_path, exist_ok=True)
             print("extracting the zip archive")
