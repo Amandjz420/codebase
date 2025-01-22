@@ -40,7 +40,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             project = serializer.save()
             zip_file = project.zip_file
-            if len(self.repo_path) < 5:
+            if len(project.repo_path) < 5:
                 new_repo_path = os.path.join(settings.MEDIA_ROOT, project.name)
                 os.makedirs(new_repo_path, exist_ok=True)
                 print("extracting the zip archive")
