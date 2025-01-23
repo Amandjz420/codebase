@@ -63,16 +63,13 @@ smarter_llm = ChatGroq(
     timeout=60,                  # Set a timeout for API requests
     max_retries=3                # Define the number of retries for failed requests
 )
-SESSION_NAME = None
+
 output_buffer = []
-def get_session_name() -> str:
-    return SESSION_NAME
 
 def get_output_buffer() -> []:
     return output_buffer
 
 def generate_session_name(project_name):
-    global SESSION_NAME
     """
     Generates a 6-digit code based on the current time.
 
@@ -193,6 +190,7 @@ def start_tmux_session_with_logging(directory, project_name, session_name=""):
     output_buffer = []
     # Set the working directory
     if not session_name:
+        # FIXME: remove the logic from here
         session_name = generate_session_name(project_name)
     # Start the tmux session
     try:

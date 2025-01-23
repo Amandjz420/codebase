@@ -50,7 +50,7 @@ tools_info = """
       If there is any uncertainty about the file location or the filepath, 
       either infer the correct path from context or ask the user for clarification.\n
 
-    - terminal_executor: Use this to execute terminal commands. Input should be the command to run.\n
+    - terminal_executor: Use this to execute terminal commands. Input should be the command to run and terminal session_name.\n
 
     - search_web_browser: Use this tool when you need to browse the web for current or detailed information.
      Provide a well-crafted, specific query as a parameter to ensure accurate results. 
@@ -135,6 +135,7 @@ def executor(state: AgentState) -> AgentState:
     plan = state["plan"]
     current_step = state["current_step"]
     firebase_chat_id = state.get("firebase_chat_id", "")
+    session_name = state.get("session_name", "")
 
 
     if current_step < len(plan):
@@ -168,6 +169,7 @@ def executor(state: AgentState) -> AgentState:
                 "Project's tree structure: \n``" + tree_structure + "``\n"
                 "Current's project id: ``" + state['project_id'] + "``\n"
                 "Available tools:\n``" + tools_info + "``\n"
+                f"Current terminal session name: {session_name}\n\n"
                 "My goal is to successfully execute the given steps by appropriately using these tools.\n"
                 "When the user provides a step description, determine the necessary actions and use the tools to perform them.\n"
                 "**Important:** I always carefully verify the correct relative paths when using the code_editor tool. "

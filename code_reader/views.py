@@ -585,6 +585,25 @@ class ChangeRequestedPlanView(APIView):
             status=200
         )
 
+class PlanDetailView(APIView):
+
+    def get(self, request, plan_id):
+        plan_obj = Plan.objects.get(id=plan_id)
+        if not plan_obj:
+            return Response({"error", f"no plan object present for the id: {plan_id}"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        steps = StepSerializer(Step.objects.filter(plan=plan_obj), many=True).data
+        return Response(
+            {
+                "message": f"Plan fetched for id: {plan_obj.id} ",
+                "plan_id": plan_obj.id,
+                "steps": steps,
+                "session_name": plan_obj.session_name,
+                "firebase_chat_id": plan_obj.firebase_chat_id
+            },
+            status=200
+        )
+
 class PlanFeedbackView(APIView):
 
     def post(self, request, plan_id):

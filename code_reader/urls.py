@@ -1,7 +1,7 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path, include
 from .views import (ProjectViewSet, FileViewSet, login_view, FileDetailViewSet, ProjectReadFilesView,
-                    DocumentDetailFetch, ExecutorView, PlanExecutorView, PlanFeedbackView,
+                    DocumentDetailFetch, ExecutorView, PlanExecutorView, PlanFeedbackView, PlanDetailView,
                     ProjectDetailViewSet, ProjectListViewSet, QnAView, ChangeRequestedPlanView,
                     ProjectFilesView, UserDetailView, ChangeRequestedView, ChangeRequestedFeedbackView)
 from conversation.views import MessagesDetailViewSet
@@ -25,6 +25,7 @@ urlpatterns = [
     path('change-request/<int:change_request_id>/', ChangeRequestedView.as_view(), name='change-request-detail'),
     path('change-request/<int:change_request_id>/feedback/', ChangeRequestedFeedbackView.as_view(), name='change-request-feedback'),
     path('change-request/<int:change_request_id>/plan/', ChangeRequestedPlanView.as_view(), name='change-request-plan'),
+    path('plan/<int:plan_id>/', PlanDetailView.as_view(), name='plan-fetch'),
     path('plan/<int:plan_id>/feedback/', PlanFeedbackView.as_view(), name='plan-feedback'),
     path('plan/<int:plan_id>/execute/', PlanExecutorView.as_view(), name='plan-execute'),
 

@@ -13,15 +13,16 @@ from django.conf import settings
 
 
 @tool
-def terminal_executor(command: str) -> Dict[str, Any]:
+def terminal_executor(command: str, session_name: str) -> Dict[str, Any]:
     """
-    Execute a shell command and return its output, error message, and exit code.
+    Execute a shell command on specific terminal session and return its output, error message, and exit code.
     """
     try:
-        from code_reader.executor.utils import get_output_buffer, get_session_name
+        from code_reader.executor.utils import get_output_buffer
         # Safely split the command into arguments
         output_buffer = get_output_buffer()
-        session_name = get_session_name()
+        print("output_buffer")
+        print(output_buffer)
 
         send_command_to_tmux(command=command, session_name=session_name)
 
