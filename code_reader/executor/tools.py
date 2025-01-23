@@ -2,12 +2,15 @@
 
 import os
 import time
+from pathlib import Path
+
 from langchain_core.tools import tool
 from langchain_community.utilities import SerpAPIWrapper
 from typing import Dict, Any
 from code_reader.executor.utils import send_command_to_tmux, invoke_model, start_tmux_session_with_logging
 from code_reader.executor.outputparser import CodeUpdateResponse
-from code_reader.models import Project
+from code_reader.models import Project, File
+from code_reader.tasks import async_file_summarizer
 from code_reader.utils import run_file_summarizer, get_filtered_tree
 from django.conf import settings
 
@@ -99,17 +102,18 @@ def read_file_content(filepath: str) -> str:
 
 
 @tool
-def code_editor(filepath: str, instructions: str) -> str:
+def code_editor(filepath: str, instructions: str, current_project_id: int, create: bool) -> str:
     """
     Edit or write code to a specified file based on the instructions provided.
     filepath - relative path of the file from current working directory
     instructions - instructions for the file at the path
+    current_project_id - current project id
+    create - true, if the file is not already there, and it will be created
     """
     try:
         # Resolve the absolute path
         absolute_filepath = os.path.join(os.getcwd(), filepath)
         absolute_filepath = os.path.abspath(absolute_filepath)
-
         # Ensure the directory exists
         directory = os.path.dirname(absolute_filepath)
         if directory and not os.path.exists(directory):
@@ -133,9 +137,13 @@ def code_editor(filepath: str, instructions: str) -> str:
 
         updated_code_response = invoke_model(prompt, CodeUpdateResponse)
         updated_code = updated_code_response.updated_code.strip()
-
-        # Optional: Validate the updated code (e.g., syntax check)
-
+        if create:
+            async_file_summarizer(current_project_id, absolute_filepath, updated_code=True)
+        else:
+            file_obj = File.objects.filter(path=absolute_filepath, project_id=current_project_id).first()
+            if file_obj:
+                file_obj.updated_code = updated_code
+                file_obj.save()
         with open(absolute_filepath, 'w') as file:
             file.write(updated_code)
 

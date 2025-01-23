@@ -284,7 +284,7 @@ def output_analysis(file_analysis, file_connections):
         print("\n")
 
 
-def run_file_summarizer(project_id, file_path):
+def run_file_summarizer(project_id, file_path, updated_code=False):
     project = Project.objects.get(id=project_id)
     # Main Logic
     file_content = read_file_content(file_path)
@@ -292,17 +292,30 @@ def run_file_summarizer(project_id, file_path):
     project.tree_structure = tree_output
     project.save()
     summary = summarize_file_content(file_path, file_content, tree_output)
+
+    parent_path = Path(file_path).parent
+    # Get the parent file if it exists
+    parent_file = File.objects.filter(project=project, path=parent_path).first()
+
     #FIXME: removing analysis, as we are not using it anywhere for now
     # analysis = analyze_file_content(file_path, file_content, tree_output)
     file_obj, created = File.objects.get_or_create(
         path=file_path,
         project=project,
-        defaults={'analysis': summary, "summary": summary, "content": file_content}
+        defaults={
+            'analysis': summary,
+            "summary": summary,
+            "content": file_content,
+            "updated_code": file_content if updated_code else None,
+            "parent_file": parent_file if parent_file else None,
+        }
     )
     if not created:
         file_obj.analysis = summary
         file_obj.summary = summary
         file_obj.content = file_content
+        if updated_code:
+            file_obj.updated_code = file_content if updated_code else None
         file_obj.save()
     return file_obj
 
@@ -389,8 +402,11 @@ def run_code_reader(project, file_obj=None):
         # Print the captured output
         print("preocessing file: " + path)
         file_object = File.objects.filter(path=path, project=project).first()
-        # print(file_object.content)
-        # print(content)
+
+        if file_object and file_object.updated_code:
+            file_object.updated_code = None
+            file_object.save()
+
         if file_object and file_object.content == content:
             print(f"file {file_object.path} skipped")
             continue
@@ -451,6 +467,7 @@ def build_tree(node):
         'type': node_type,
         'filetype': file_extension,
         'id': node.id,
+        'updated':  True if node.updated_code and node_type == 'file' else False
     }
 
     # # Include content for files

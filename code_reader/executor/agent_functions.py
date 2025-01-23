@@ -45,7 +45,7 @@ summary_memory.input_key = "Planner"
 
 tools_info = """
     - code_editor: Use this to create or modify code files. 
-      Inputs are the relative 'filepath' and 'instructions' on how to modify the code.
+      Inputs are the relative 'filepath', 'instructions', 'current_project_id' and 'create'(have to create or not) on how to modify the code.
       Always verify you are using the correct relative path from the current working directory.
       If there is any uncertainty about the file location or the filepath, 
       either infer the correct path from context or ask the user for clarification.\n

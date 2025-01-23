@@ -64,6 +64,7 @@ class File(models.Model):
     path = models.CharField(max_length=500)
     summary = models.TextField()
     content = models.TextField()
+    updated_code = models.TextField(blank=True, null=True)
     analysis = models.TextField()
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     is_file_type = models.BooleanField(default=True)
