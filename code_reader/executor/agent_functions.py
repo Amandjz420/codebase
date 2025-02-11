@@ -93,11 +93,11 @@ def create_plan(user_query, project_summary):
         f"The user wants the following to be done:\n\n"
         f"**User Query:**\n##{user_query}##\n\n"
         "Your task:\n"
-        "1. Break down the user's requested task into a detailed sequence of steps to achieve the given goal.\n"
+        "1. Break down the user's requested task into sequence of steps to achieve the given goal.\n"
         "2. Each step should be described in simple, clear language without omitting any crucial information.\n"
         "3. If the user query references specific files or paths, use these exact paths in the steps.\n"
         "4. Dont add steps to test or run the application, unless user explicitly mentions it.\n"
-        "5. Ensure the steps are detailed enough so that the executor agent, using its available tools, "
+        "5. Ensure the steps are detailed enough so that the executor agent can work on it, using its available tools, and "
         "can follow them without additional assumptions.\n\n"
         "Available tools for execution (for reference):\n"
         f"{tools_info}\n\n"
@@ -188,9 +188,11 @@ def executor(state: AgentState) -> AgentState:
         )
         print("Agent Result:", result['output'])
         write_in_executor_firestore(firebase_chat_id, data={
-            f"Agent Step {current_step} Execution": result['input'],
-            f"Agent Step {current_step} Execution's Result": result['output'],
-        })
+            "messages": [
+                {"execution": f"Agent Step {current_step} Execution instructions: {result['input']}"},
+                {"execution": f"Agent Step {current_step} Execution's Result {result['output']}"},
+            ]
+        }, messages=True)
         # print("Current working directory", os.getcwd())
         # Store the execution result in the state
         execution_result = result
@@ -277,11 +279,20 @@ def feedback_analyzer(state: AgentState) -> AgentState:
         state["plan"] = plan
 
     state["current_step"] = current_step + 1
+    # write_in_executor_firestore(firebase_chat_id, data={
+    #     "current_step": current_step + 1,
+    #     f"Feedback Analyzer Response at {current_step} result's further step": further_steps,
+    #     "plan": plan,
+    # })
     write_in_executor_firestore(firebase_chat_id, data={
-        "current_step": current_step + 1,
-        f"Feedback Analyzer Response at {current_step} result's further step": further_steps,
-        "plan": plan,
-    })
+        "messages": [
+            {"analyzer": f"Feedback Analyzer Response at {current_step} result's: {execution_result}"},
+            {"analyzer": f"Steps reorganised: {str(get_plan_title_array(further_steps))}"},
+        ],
+        "current_step": state["current_step"],
+        "previous_steps": str(get_plan_title_array(plan[:current_step + 1])),
+        "upcoming_steps": str(get_plan_title_array(plan[current_step + 1:])),
+    }, messages=True)
     return state
 
 def completion_check(state: AgentState) -> Union[str, Literal[END]]:

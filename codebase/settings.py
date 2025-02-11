@@ -70,8 +70,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'channels',
     'code_reader',
-    'conversation'
+    'conversation',
 ]
 
 
@@ -130,6 +131,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'codebase.wsgi.application'
+ASGI_APPLICATION = 'codebase.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],  # Ensure Redis is installed and running
+        },
+    },
+}
 
 
 # Database

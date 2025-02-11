@@ -190,6 +190,7 @@ class QnAView(APIView):
         # Extract the user's query from the request
         user_query = request.data['query']
         print(user_query)
+        refined_user_query = user_query
         files = list(File.objects.filter(project=project, is_file_type=True).values('path', 'summary'))
         if len(str(files)) > 50000 and not project.files_summary:
             documents = [Document(page_content=file['summary'], metadata={"path": file['path']}) for file in files]
@@ -214,7 +215,9 @@ class QnAView(APIView):
                       information for user query
                     """
             response = invoke_model(prompt, FilepathResponse)
-            file_paths = response.model_dump()['files']
+            data = response.model_dump()
+            file_paths = data['file_paths']
+            refined_user_query = data['refined_user_query']
             print('file_paths')
             print(file_paths)
             code_context = File.objects.filter(path__in=file_paths).values('path', 'content', 'summary')
@@ -232,7 +235,7 @@ class QnAView(APIView):
                 Files summary and the content: ##{code_context}##\n
                 Summary of the conversation : ##{str(summary_memory.load_memory_variables({}))}##\n\n
                 Based on the above given data, Answer the following questions:
-                User Query: ##{user_query}##\n\n
+                User Query: ##{refined_user_query}##\n\n
                 Notes for you answer:
                     1. if the question is about changing or adding something in the project's code,
                      make the answer so that you will be telling what user needs to do in what all files. \n
@@ -345,6 +348,8 @@ class ExecutorView(APIView):
     def prepare_prompt(self, project, user_query, conversation_obj):
         # Prepare conversation history
         summary_memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=500)
+        refined_user_query = user_query
+
         conv_summary = "No conversation yet\n"
         if 'history' in conversation_obj.conversation_summary:
             conv_summary = ast.literal_eval(conversation_obj.conversation_summary)['history']
@@ -375,7 +380,9 @@ class ExecutorView(APIView):
 
                     """
             response = invoke_model(prompt_for_fetching_file, FilepathResponse)
-            file_paths = response.model_dump()['files']
+            data = response.model_dump()
+            file_paths = data['file_paths']
+            refined_user_query = data['refined_user_query']
             print('file_paths retrieved: ')
             print(file_paths)
             related_file_used = file_paths
@@ -391,18 +398,18 @@ class ExecutorView(APIView):
 
         # Prepare the prompt or input for the LLM
         prompt = f"""
-            You are an AI assistant designed to interpret user requests and provide actionable insights for a project's code.
+            You are an AI Code Assistant designed to interpret user requests and provide actionable insights for a project's code.
             Below is the project information, including its file structure, summary, conversation history, and individual file details.
     
             ### Project Information:
-            - **Project Name**: {project.name}
-            - **File Structure**: {project.tree_structure}
-            - **Project Summary**: {project.summary}
-            - **Files Summary and Content**: {code_context}
-            - **Summary of the Conversation**: {str(summary_memory.load_memory_variables({}))}
+            - **Project Name**: ``{project.name}``\n\n
+            - **File Structure**: ``{project.tree_structure}``\n\n
+            - **Project Summary**: ``{project.summary}``\n\n
+            - **Files Summary and Content**: ``{code_context}``\n\n
+            - **Summary of the Conversation**: ``{str(summary_memory.load_memory_variables({}))}``\n\n
     
             ### User Query:
-            ``{user_query}``
+            ``{refined_user_query}````\n\n
     
             ### Notes for Your Response:
             1. If the question is about modifying or adding something in the project's code,

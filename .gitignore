@@ -12,3 +12,4 @@ db.sqlite3
 media/
 static/
 text_files/
+codeknot_dev_key.pem
