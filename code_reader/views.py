@@ -216,7 +216,7 @@ class QnAView(APIView):
                     """
             response = invoke_model(prompt, FilepathResponse)
             data = response.model_dump()
-            file_paths = data['file_paths']
+            file_paths = data['files']
             refined_user_query = data['refined_user_query']
             print('file_paths')
             print(file_paths)
@@ -381,8 +381,9 @@ class ExecutorView(APIView):
                     """
             response = invoke_model(prompt_for_fetching_file, FilepathResponse)
             data = response.model_dump()
-            file_paths = data['file_paths']
+            file_paths = data['files']
             refined_user_query = data['refined_user_query']
+            print('refined_user_query', refined_user_query)
             print('file_paths retrieved: ')
             print(file_paths)
             related_file_used = file_paths
@@ -640,7 +641,7 @@ class PlanExecutorView(APIView):
         project = change_requested_obj.project
         session_name = plan_object.session_name
         firebase_chat_id = plan_object.firebase_chat_id
-        steps = Step.objects.filter(plan=plan_object).order_by('-order')
+        steps = Step.objects.filter(plan=plan_object).order_by('order')
         plans = StepSerializer(steps, many=True).data
 
         #  Reference file ????

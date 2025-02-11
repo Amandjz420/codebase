@@ -7,7 +7,7 @@ from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain.memory import ConversationSummaryBufferMemory
 from langgraph.graph import END
 
-from code_reader.executor.outputparser import PlannerResponse
+from code_reader.executor.outputparser import PlannerResponse, ExecutionCheckResponse
 
 from code_reader.executor.tools import code_editor, terminal_executor, need_user_input, update_file_summary, read_file_content, \
     search_web_browser, update_project_root_dir_and_tree_structure, starting_new_tmux_session_for_running_service, wait_for_some_time
@@ -189,15 +189,15 @@ def executor(state: AgentState) -> AgentState:
         print("Agent Result:", result['output'])
         write_in_executor_firestore(firebase_chat_id, data={
             "messages": [
-                {"execution": f"Agent Step {current_step} Execution instructions: {result['input']}"},
-                {"execution": f"Agent Step {current_step} Execution's Result {result['output']}"},
+                {"execution": f"Step {current_step} Execution instructions: {result['input']}"},
+                {"execution": f"Step {current_step} Execution's Result {result['output']}"},
             ]
         }, messages=True)
         # print("Current working directory", os.getcwd())
         # Store the execution result in the state
         execution_result = result
-        if len(state["feedback"]) > 4:
-            state["feedback"] = (state["feedback"][:4] +
+        if len(state["feedback"]) > 6:
+            state["feedback"] = (state["feedback"][:6] +
                                  [{f"Step_{current_step}": result['input'], "execution_result_by_agent": result['output']}])
         else:
             state["feedback"].append({f"step_{current_step}": result['input'], "execution_result_by_agent": result['output']})
@@ -213,6 +213,7 @@ def feedback_analyzer(state: AgentState) -> AgentState:
     print("Feedback Analyzer ")
     execution_result = state.get("execution_result", "")
     current_step = state.get("current_step", 0)
+    executions_feedback = state.get("feedback", [])
     firebase_chat_id = state.get("firebase_chat_id", "")
     plan = state.get("plan", [])
 
@@ -220,6 +221,25 @@ def feedback_analyzer(state: AgentState) -> AgentState:
         execution_result = "No execution result available."
         # Decide whether to halt or proceed; for now, proceed to the next step
         state["current_step"] = current_step + 1
+        return state
+
+    success_prompt = (
+        f"Analyze the following execution result and determine if the step was successfully completed.\n\n"
+        f"Current step Execution Result: {execution_result}\n\n"
+        f"For previous executions context: ``Previous Steps Execution Results: {executions_feedback}``\n\n"
+        "Respond with 'yes' if current step's execution was successful, otherwise respond with 'no'."
+    )
+    success_response = invoke_model(success_prompt, ExecutionCheckResponse)
+    if success_response.model_dump()['execution_success'].strip().lower() == "yes":
+        state["current_step"] = current_step + 1
+        write_in_executor_firestore(firebase_chat_id, data={
+            "messages": [
+                {"analyzer": f"Execution was done successfully hence moving on to next step {current_step + 1}"},
+            ],
+            "current_step": state["current_step"],
+            "previous_steps": str(get_plan_title_array(plan[:current_step + 1])),
+            "upcoming_steps": str(get_plan_title_array(plan[current_step + 1:])),
+        }, messages=True)
         return state
 
     # Retrieve the step description
@@ -286,7 +306,7 @@ def feedback_analyzer(state: AgentState) -> AgentState:
     # })
     write_in_executor_firestore(firebase_chat_id, data={
         "messages": [
-            {"analyzer": f"Feedback Analyzer Response at {current_step} result's: {execution_result}"},
+            {"analyzer": f"Steps are modified at Step {current_step}"},
             {"analyzer": f"Steps reorganised: {str(get_plan_title_array(further_steps))}"},
         ],
         "current_step": state["current_step"],

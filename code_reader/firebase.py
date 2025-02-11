@@ -18,7 +18,8 @@ db = firestore.client()
 
 def write_in_executor_firestore(document_id='codeknot_random', data=None, messages=False):
 # Add data to a collection
-    doc_ref = db.collection('executor').document(document_id)
+    doc_ref = db.collection('executor_test').document(document_id)
+    # doc_ref = db.collection('executor').document(document_id)
     # Set the document with merge
     doc = doc_ref.get()
     if doc.exists:
@@ -37,7 +38,8 @@ def write_in_executor_firestore(document_id='codeknot_random', data=None, messag
 
 def read_in_executor_firestore(document_id='codeknot_random'):
     # Add data to a collection
-    doc_ref = db.collection('executor').document(document_id)
+    doc_ref = db.collection('executor_test').document(document_id)
+    # doc_ref = db.collection('executor').document(document_id)
     # Fetch the document
     doc = doc_ref.get()
     if doc.exists:

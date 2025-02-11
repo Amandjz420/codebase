@@ -19,12 +19,16 @@ class PlannerResponse(BaseModel):
 class CodeUpdateResponse(BaseModel):
     updated_code: str = Field(description="The updated or new code generated based on the feedback.")
 
+class ExecutionCheckResponse(BaseModel):
+    execution_success: str = Field(description="yes, if execution was successful, otherwise no")
+
+
 class FeedbackResponse(BaseModel):
     feedback: str = Field(description="Feedback on whether the task was successfully executed or not.")
 
 class FilepathResponse(BaseModel):
     files: List[str] = Field(description="list of file paths")
-    refined_user_query: List[str] = Field(description="Refined user query, based on the project and conversation context")
+    refined_user_query: str = Field(description="Redefine user's query, based on the project and conversation context in details")
 
 class SupervisorResponse(BaseModel):
     aiReply: str = Field(
