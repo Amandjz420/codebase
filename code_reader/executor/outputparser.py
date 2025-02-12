@@ -28,7 +28,8 @@ class FeedbackResponse(BaseModel):
 
 class FilepathResponse(BaseModel):
     files: List[str] = Field(description="list of file paths")
-    refined_user_query: str = Field(description="Redefine user's query, based on the project and conversation context in details")
+    refined_user_query: str = Field(description="Redefine user's query, based on the project and conversation"
+                                                "(if user message is related to previous conversation) context in details")
 
 class SupervisorResponse(BaseModel):
     aiReply: str = Field(

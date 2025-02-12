@@ -96,10 +96,10 @@ def create_plan(user_query, project_summary):
         "1. Break down the user's requested task into sequence of steps to achieve the given goal.\n"
         "2. Each step should be described in simple, clear language without omitting any crucial information.\n"
         "3. If the user query references specific files or paths, use these exact paths in the steps.\n"
-        "4. Dont add steps to test or run the application, unless user explicitly mentions it.\n"
+        "4. DO NOT add or create steps to test or run the application, unless user explicitly mentions it.\n"
         "5. Ensure the steps are detailed enough so that the executor agent can work on it, using its available tools, and "
         "can follow them without additional assumptions.\n\n"
-        "Available tools for execution (for reference):\n"
+        "Available tools for execution with the agent to execute (for reference):\n"
         f"{tools_info}\n\n"
         "Additional context:\n"
         f"**Project Summary:** {project_summary}\n\n"
@@ -216,6 +216,8 @@ def feedback_analyzer(state: AgentState) -> AgentState:
     executions_feedback = state.get("feedback", [])
     firebase_chat_id = state.get("firebase_chat_id", "")
     plan = state.get("plan", [])
+    plan_titles = get_plan_title_array(plan)
+
 
     if not execution_result:
         execution_result = "No execution result available."
@@ -223,11 +225,16 @@ def feedback_analyzer(state: AgentState) -> AgentState:
         state["current_step"] = current_step + 1
         return state
 
+    print("executions_feedback")
+    print(executions_feedback)
     success_prompt = (
         f"Analyze the following execution result and determine if the step was successfully completed.\n\n"
-        f"Current step Execution Result: {execution_result}\n\n"
-        f"For previous executions context: ``Previous Steps Execution Results: {executions_feedback}``\n\n"
-        "Respond with 'yes' if current step's execution was successful, otherwise respond with 'no'."
+        f"Current step Execution Result: ``{execution_result}``\n\n"
+        "After reviewing the current step's execution, consider the upcoming steps:\n"
+        f"``{str(plan[current_step + 1:])}``\n\n"
+        f"For previous executions Results: ``Previous Steps Execution Results: {executions_feedback}``\n\n"
+        "Respond with 'no' if current step's execution was unsuccessful or requires some new planning which"
+        "is not included in upcoming steps, otherwise respond with 'yes'."
     )
     success_response = invoke_model(success_prompt, ExecutionCheckResponse)
     if success_response.model_dump()['execution_success'].strip().lower() == "yes":
@@ -255,7 +262,6 @@ def feedback_analyzer(state: AgentState) -> AgentState:
     # print("summary =========================>")
     # print(summary)
 
-    plan_titles = get_plan_title_array(plan)
     # Construct the prompt to analyze the execution result and determine if additional steps are needed
     prompt = (
         f"User Given Task: ``{state['user_query']}``\n\n"

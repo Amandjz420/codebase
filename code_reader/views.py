@@ -119,7 +119,6 @@ def login_view(request):
     password = request.data.get('password')
     first_name = request.data.get('first_name')
     last_name = request.data.get('last_name')
-
     if not username or not password:
         return Response({'error': 'Username and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -369,15 +368,16 @@ class ExecutorView(APIView):
         if user_query and files:
             prompt_for_fetching_file = f"""
                 #         Project data: ##{project.name}##\n
+                #         Project Tree Structure: ##{project.tree_structure}##\n
                 #         Project summary: ##{project.summary}##\n
                 #         Files summary docs: ##{files}##\n
                 #         Summary of the conversation : ##{str(conv_summary)}##\n\n
                 #         Based on the above given data, Answer the following questions:
                 #         User's Query: ##{user_query}##\n\n
                 #         Yours Instruction: 
-                            1. give me file paths of all the files that you need the content so that you can
-                            interpret user requests and provide actionable insights for a project's code.
-
+                            1. give me file paths of all the files for which you need the content, so that you can
+                            interpret user requests and provide actionable & useful insights for a project's code.
+                            (Include all the files which you need, maybe max 2-3 related files too)
                     """
             response = invoke_model(prompt_for_fetching_file, FilepathResponse)
             data = response.model_dump()

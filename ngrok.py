@@ -1,15 +1,14 @@
-import ngrok
-import time
+from pyngrok import ngrok
 
-# Establish connectivity
-listener = ngrok.forward(3000, authtoken_from_env=True)
+ngrok.set_auth_token(token="2sxUkVyWBcOJTBxztO4hpPoxLg7_6Zkt4jcKKA58TCtBYjHmw")
+# Establish a tunnel to the local server running on port 3000
+public_url = ngrok.connect(3000)
+print(f"ngrok tunnel established at {public_url}")
 
-# Output ngrok url to console
-print(f"Ingress established at {listener.url()}")
-
-# Keep the listener alive
+# Keep the script running to maintain the tunnel
 try:
-    while True:
-        time.sleep(1)
+    input("Press Enter to exit...\n")
 except KeyboardInterrupt:
-    print("Closing listener")
+    print("Shutting down tunnel...")
+finally:
+    ngrok.disconnect(public_url)

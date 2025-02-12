@@ -220,7 +220,10 @@ def summarize_file_content(file_path, content, file_structure):
     Summarize the following content from the file **{file_path}**\n
     Content:\n
     ##{content}##\n\n
-    Provide a concise summary capturing the main components, the role of this file in the project, and any key functions or classes it contains. Also what are the import and export
+    Provide a concise summary capturing the main components, 
+    the role of this file in the project, 
+    any key functions or classes it contains, and
+    also note import of the related files in the project.
     """
     return call_openai_llm(prompt, model='gpt-4o-mini')
 
