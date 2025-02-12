@@ -13,3 +13,4 @@ media/
 static/
 text_files/
 codeknot_dev_key.pem
+.DS_Store
