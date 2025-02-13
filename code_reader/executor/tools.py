@@ -23,7 +23,7 @@ def terminal_executor(command: str, session_name: str) -> Dict[str, Any]:
     try:
         from code_reader.executor.utils import get_output_buffer
         # Safely split the command into arguments
-        output_buffer = get_output_buffer()
+        output_buffer = get_output_buffer(session_name)
         print("output_buffer")
         print(output_buffer)
 
@@ -196,18 +196,21 @@ def search_web_browser(query: str):
     return str(result)
 
 @tool
-def starting_new_tmux_session_for_running_service(project_id, command):
+def starting_new_tmux_session_for_running_service(project_id, command, session_name):
     """
     will start a new tmux with command to run a service and add the logs to terminal session.
     :param project_id: id of the project
     :param command: command to run the server:
+    :project_run_session_name:  session name
     :return:
     """
     from code_reader.executor.utils import get_output_buffer
-    output_buffer = get_output_buffer()
+    output_buffer = get_output_buffer(f"{session_name}_run_project")
     project = Project.objects.get(id=int(str(project_id)))
 
-    directory, ses_name = start_tmux_session_with_logging(project.repo_path, project.name)
+    directory, ses_name = start_tmux_session_with_logging(
+        project.repo_path, project.name, session_name=f"{session_name}_run_project"
+    )
     send_command_to_tmux(ses_name, command)
     print(f"Waiting for command '{command}' to complete...")
     time.sleep(5)  # Adjust based on expected command duration
@@ -215,7 +218,8 @@ def starting_new_tmux_session_for_running_service(project_id, command):
     output = ''.join(output_buffer)
     output_buffer.clear()
 
-    return f" at the directory: {directory}, new tmux session has been on with name: {ses_name} and is running the service using command: {command} resulting the output in terminal: {output}"
+    return (f" at the directory: {directory}, new tmux session has been on with name: {session_name}_run_project "
+            f"and is running the service using command: {command} resulting the output in terminal: {output}")
 
 @tool
 def wait_for_some_time(seconds: str, reason_to_wait):

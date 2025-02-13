@@ -303,23 +303,7 @@ class ExecutorView(APIView):
                     user_initial_query=user_query,
                     document_list=str(related_file_used),
                 )
-                session_name = f"CR{change_requested_obj.id}_session_executor"
-                firebase_chat_id = f"CR{change_requested_obj.id}_session_executor"
                 print(f"change_requested_obj: {change_requested_obj.id}")
-                if executor_run:
-                    executor_prompt = f"""
-                                    User Initial Request: \n```{user_query}``\n\n
-                                    And Code Reader suggested: \n###{answer['aiReply']}###\n\n
-                                """
-                    call_executor(
-                        directory=project.repo_path,
-                        user_request=executor_prompt,
-                        project_obj=project,
-                        BASE_DIR=settings.BASE_DIR,
-                        reference_file=base64_image,
-                        session_name=session_name,
-                        firebase_chat_id=firebase_chat_id
-                    )
                 return Response({'answer': answer['aiReply'], "change_request_id": change_requested_obj.id}, status=200)
 
             return Response({'answer': answer['aiReply']}, status=200)
@@ -409,8 +393,8 @@ class ExecutorView(APIView):
             - **Files Summary and Content**: ``{code_context}``\n\n
             - **Summary of the Conversation**: ``{str(summary_memory.load_memory_variables({}))}``\n\n
     
-            ### User Query:
-            ``{refined_user_query}````\n\n
+            ### User Query initial query: ``{user_query}``\n
+            ### User Query Refined query by AI agent: ``{refined_user_query}``\n\n
     
             ### Notes for Your Response:
             1. If the question is about modifying or adding something in the project's code,

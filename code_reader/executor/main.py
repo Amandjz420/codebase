@@ -7,8 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from code_reader.executor.agent_functions import planner, executor, feedback_analyzer, completion_check, AgentState
-from code_reader.executor.utils import start_tmux_session_with_logging, kill_tmux_session
-
+from code_reader.executor.utils import start_tmux_session_with_logging, kill_tmux_session, get_output_buffer
 
 
 def call_executor(directory, user_request, project_obj, BASE_DIR, reference_file='', firebase_chat_id='', session_name=""):
@@ -32,6 +31,7 @@ def call_executor(directory, user_request, project_obj, BASE_DIR, reference_file
 
     _, session_name = start_tmux_session_with_logging(directory, project_obj.name, session_name)
     print("session_name: ", session_name)
+    output_buffer = get_output_buffer(session_name)
     # === Create and Compile Workflow ===
     workflow = StateGraph(AgentState)
     workflow.set_entry_point("planner")

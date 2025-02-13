@@ -15,7 +15,6 @@ from langchain.output_parsers import PydanticOutputParser
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
-
 from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from django.conf import settings
@@ -52,22 +51,26 @@ llm = ChatOpenAI(
 
 smarter_llm = ChatOpenAI(
     api_key=OPENAI_API_KEY,
-    model_name='o1-preview',
+    model_name='o3-mini',
     temperature=1
 )
 
-smarter_llm = ChatGroq(
-    model="llama3-70b-8192",  # Specify the desired model
-    temperature=0.7,             # Adjust the temperature as needed
-    api_key=OPENAI_API_KEY,             # Set the maximum number of tokens
-    timeout=60,                  # Set a timeout for API requests
-    max_retries=3                # Define the number of retries for failed requests
-)
+# smarter_llm = ChatGroq(
+#     model="llama3-70b-8192",  # Specify the desired model
+#     temperature=0.7,             # Adjust the temperature as needed
+#     api_key=OPENAI_API_KEY,             # Set the maximum number of tokens
+#     timeout=60,                  # Set a timeout for API requests
+#     max_retries=3                # Define the number of retries for failed requests
+# )
 
-output_buffer = []
+output_buffers = {}
 
-def get_output_buffer() -> []:
-    return output_buffer
+def get_output_buffer(session_name: str) -> list:
+    if session_name not in output_buffers:
+        output_buffers[session_name] = []
+    print("output_buffers")
+    print(output_buffers)
+    return output_buffers[session_name]
 
 def generate_session_name(project_name):
     """
@@ -84,6 +87,7 @@ def generate_session_name(project_name):
     SESSION_NAME = f"{project_name}-{code:06d}"
     # Ensure the code is zero-padded to 6 digits
     return SESSION_NAME
+
 def invoke_model(prompt: str, response_model: Type[BaseModel], is_list: bool = False, intelligence: str ="medium", image="") -> Union[BaseModel, List[BaseModel]]:
     """
     Utility to invoke the language model and parse the response with the specified response model.
@@ -145,7 +149,6 @@ def start_tmux_session(session_name, directory):
     except subprocess.CalledProcessError as e:
         print(f"Failed to start tmux session '{session_name}' in directory '{directory}'. Error: {e}")
 
-
 def send_command_to_tmux(session_name, command, delay=0.1):
     """
     Sends a command to the specified tmux session.
@@ -158,7 +161,6 @@ def send_command_to_tmux(session_name, command, delay=0.1):
     except subprocess.CalledProcessError as e:
         print(f"Failed to send command to tmux session '{session_name}'. Command: {command}. Error: {e}")
 
-
 def create_tmux_pane_logger(session_name, log_file):
     """
     Pipes the tmux pane output to a log file.
@@ -167,7 +169,6 @@ def create_tmux_pane_logger(session_name, log_file):
         subprocess.run(['tmux', 'pipe-pane', '-o', '-t', session_name, f'cat >> {log_file}'])
     except subprocess.CalledProcessError as e:
         print(f"Failed to create tmux pane logger for session '{session_name}'. Log file: {log_file}. Error: {e}")
-
 
 def monitor_log_file(log_file, output_buffer_arr):
     """
@@ -184,11 +185,7 @@ def monitor_log_file(log_file, output_buffer_arr):
             else:
                 time.sleep(0.1)
 
-
 def start_tmux_session_with_logging(directory, project_name, session_name=""):
-    global output_buffer
-    output_buffer = []
-    # Set the working directory
     if not session_name:
         # FIXME: remove the logic from here
         session_name = generate_session_name(project_name)
@@ -199,7 +196,7 @@ def start_tmux_session_with_logging(directory, project_name, session_name=""):
         print(e)
         return
 
-    time.sleep(2)  # Give some time for tmux session to start
+    time.sleep(2)
     print("Starting tmux session with", session_name)
     # Create a temporary log file to capture the pane output
     log_file = tempfile.NamedTemporaryFile(delete=False)
@@ -207,6 +204,7 @@ def start_tmux_session_with_logging(directory, project_name, session_name=""):
 
     # Start logging the tmux pane output
     create_tmux_pane_logger(session_name, log_file.name)
+    output_buffer = get_output_buffer(session_name)
 
     # Start monitoring the log file in a separate thread
     monitor_thread = threading.Thread(target=monitor_log_file, args=(log_file.name, output_buffer), daemon=True)
