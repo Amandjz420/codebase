@@ -30,11 +30,11 @@ class FilepathResponse(BaseModel):
     files: List[str] = Field(description="list of file paths")
     refined_user_query: str = Field(description="Redefine user's query, based on the project and conversation"
                                                 "(if user message is related to previous conversation) context in details")
-
+    question_for_clarification: str = Field(description="If user query is vague and you are not able to understand, then one question that you will want to ask user, for enhancing user query based on the answer. If no clarification is needed, then pass on empty string ")
 class SupervisorResponse(BaseModel):
     aiReply: str = Field(
-        description="Your response based on the project's files, providing either the requested information in details "
-                    "or a detailed step-by-step guide for implementing the required changes.",
+        description="Agents response based on the context provided, providing either the requested information in details "
+                    "or a detailed step guide for implementing the required changes.",
         max_length=8000
     )
     isExecutionRequired: bool = Field(default=False,

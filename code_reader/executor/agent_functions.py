@@ -98,7 +98,10 @@ def create_plan(user_query, project_summary):
         "3. If the user query references specific files or paths, use these exact paths in the steps.\n"
         "4. DO NOT add or create steps to test or run the application, unless user explicitly mentions it.\n"
         "5. Ensure the steps are detailed enough so that the executor agent can work on it, using its available tools, and "
-        "can follow them without additional assumptions.\n\n"
+        "can follow them without additional assumptions.\n"
+        "6. The executor agent will be connected to terminal, and at the project working directory. "
+        "But might need to activate the environment if needed.\n\n"
+        "Note: "
         "Available tools for execution with the agent to execute (for reference):\n"
         f"{tools_info}\n\n"
         "Additional context:\n"
@@ -158,6 +161,23 @@ def executor(state: AgentState) -> AgentState:
         tree_structure = "not available right now in db, will be updated soon."
         if len(project.tree_structure) > 5:
             tree_structure = project.tree_structure
+        step_details = plan[current_step]
+        # Create a formatted string using an f-string
+        step_description = (
+            f"Step {current_step + 1}: {step_details['title']}\n"
+            f"Description: {step_details['detailed_description']}\n"
+            f"Pseudo Code:\n{step_details['pseudo_code']}\n"
+            # Uncomment the following line if you want to include the code snippet
+            # f"Code Snippet:\n{step_details['code_snippet']}\n"
+        )
+
+        print(step_description)
+
+        write_in_executor_firestore(firebase_chat_id, data={
+            "messages": [
+                {"executor": f"Executing {step_description}"},
+            ]
+        }, messages=True)
         # Updated tool descriptions in the system prompt
         prompt = ChatPromptTemplate.from_messages([
             (
@@ -170,6 +190,7 @@ def executor(state: AgentState) -> AgentState:
                 "Current's project id: ``" + state['project_id'] + "``\n"
                 "Available tools:\n``" + tools_info + "``\n"
                 f"Current terminal session name: {session_name}\n\n"
+                f"Current firebase chat id: {firebase_chat_id}\n\n"
                 "My goal is to successfully execute the given steps by appropriately using these tools.\n"
                 "When the user provides a step description, determine the necessary actions and use the tools to perform them.\n"
                 "**Important:** I always carefully verify the correct relative paths when using the code_editor tool. "
@@ -189,8 +210,7 @@ def executor(state: AgentState) -> AgentState:
         print("Agent Result:", result['output'])
         write_in_executor_firestore(firebase_chat_id, data={
             "messages": [
-                {"execution": f"Step {current_step} Execution instructions: {result['input']}"},
-                {"execution": f"Step {current_step} Execution's Result {result['output']}"},
+                {"executor": f"Step {current_step + 1} Execution's Result: {result['output']}"}
             ]
         }, messages=True)
         # print("Current working directory", os.getcwd())
@@ -204,7 +224,7 @@ def executor(state: AgentState) -> AgentState:
         state['execution_result'] = str(execution_result)
         state['current_directory'] = os.getcwd()
 
-        summary_memory.save_context({"Planner": f"{step_description['title']}"}, {"Executor": execution_result['output']})
+        summary_memory.save_context({"Planner": f"{step_details['title']}"}, {"Executor": execution_result['output']})
     else:
         print("All steps have been executed.")
     return state
@@ -241,7 +261,7 @@ def feedback_analyzer(state: AgentState) -> AgentState:
         state["current_step"] = current_step + 1
         write_in_executor_firestore(firebase_chat_id, data={
             "messages": [
-                {"analyzer": f"Execution was done successfully hence moving on to next step {current_step + 1}"},
+                {"analyzer": f"Execution was done successfully hence moving on to next step, if any"},
             ],
             "current_step": state["current_step"],
             "previous_steps": str(get_plan_title_array(plan[:current_step + 1])),
@@ -312,7 +332,7 @@ def feedback_analyzer(state: AgentState) -> AgentState:
     # })
     write_in_executor_firestore(firebase_chat_id, data={
         "messages": [
-            {"analyzer": f"Steps are modified at Step {current_step}"},
+            {"analyzer": f"Steps are modified at Step {current_step + 1}"},
             {"analyzer": f"Steps reorganised: {str(get_plan_title_array(further_steps))}"},
         ],
         "current_step": state["current_step"],

@@ -280,8 +280,10 @@ class ExecutorView(APIView):
         user_query, base64_image, executor_run = self.process_user_inputs(request, project)
 
         # Prepare prompt
-        prompt, summary_memory, related_file_used = self.prepare_prompt(project, user_query, conversation_obj)
-
+        prompt, summary_memory, related_file_used, clarification = self.prepare_prompt(project, user_query, conversation_obj)
+        if clarification:
+            self.save_interaction(conversation_obj, summary_memory, user_query, clarification)
+            return Response({'answer': clarification}, status=200)
         # Call LLM and handle execution
         try:
             response = invoke_model(prompt, SupervisorResponse, image=base64_image)
@@ -367,6 +369,9 @@ class ExecutorView(APIView):
             data = response.model_dump()
             file_paths = data['files']
             refined_user_query = data['refined_user_query']
+            question_for_clarification = data['question_for_clarification']
+            if question_for_clarification:
+                return None, summary_memory, None, question_for_clarification
             print('refined_user_query', refined_user_query)
             print('file_paths retrieved: ')
             print(file_paths)
@@ -404,7 +409,7 @@ class ExecutorView(APIView):
             ### Response:
         """
 
-        return prompt, summary_memory, related_file_used
+        return prompt, summary_memory, related_file_used, None
 
     # def call_llm(self, prompt, base64_image):
     #     if base64_image:
