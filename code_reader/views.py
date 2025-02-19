@@ -278,7 +278,7 @@ class ExecutorView(APIView):
 
         # Process user inputs
         user_query, base64_image, executor_run = self.process_user_inputs(request, project)
-
+        initial_user_query = user_query
         # Prepare prompt
         prompt, summary_memory, related_file_used, clarification = self.prepare_prompt(project, user_query, conversation_obj)
         if clarification:
@@ -389,6 +389,7 @@ class ExecutorView(APIView):
         # Prepare the prompt or input for the LLM
         prompt = f"""
             You are an AI Code Assistant designed to interpret user requests and provide actionable insights for a project's code.
+            (if the files are present, otherwise if you have to create it from the scratch, do it)
             Below is the project information, including its file structure, summary, conversation history, and individual file details.
     
             ### Project Information:
