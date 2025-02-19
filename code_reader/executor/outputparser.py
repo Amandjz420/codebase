@@ -45,7 +45,7 @@ class SupervisorResponse(BaseModel):
     def determine_executor_need(user_query: str) -> bool:
         # List of keywords that indicate executor requirements
         execution_keywords = [
-            "change", "modify", "update", "execute", "run", "delete", "add", "remove", "create"
+            "change", "modify", "update", "execute", "run", "delete", "add", "remove", "create",
             "install", "configure", "deploy", "build", "terminal", "command"
         ]
 

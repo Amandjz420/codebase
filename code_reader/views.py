@@ -278,7 +278,6 @@ class ExecutorView(APIView):
 
         # Process user inputs
         user_query, base64_image, executor_run = self.process_user_inputs(request, project)
-        initial_user_query = user_query
         # Prepare prompt
         prompt, summary_memory, related_file_used, clarification = self.prepare_prompt(project, user_query, conversation_obj)
         if clarification:
@@ -292,7 +291,8 @@ class ExecutorView(APIView):
 
             # If execution is required
             # Determine if executor is needed based on user_query
-            print("condition for executor to be needed")
+            print("condition for executor to be needed for the following user query:")
+            print(user_query)
             print(SupervisorResponse.determine_executor_need(user_query))
             print(answer['isExecutionRequired'])
             print(answer['aiReply'])
