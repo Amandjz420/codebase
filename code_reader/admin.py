@@ -16,21 +16,21 @@ def updating_the_summary_in_db(modeladmin, request, queryset):
 
 
 class FileAdmin(admin.ModelAdmin):
-    list_display = ('id', 'path', 'summary', 'analysis')
+    list_display = ('id', 'path', 'summary', 'analysis', 'created_at')
     list_filter = ('project', 'path')
     search_fields = ('path',)
     actions = [updating_the_summary_in_db]
 
 
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'user')
+    list_display = ('id', 'name', 'user', 'created_at')
     list_filter = ('user',)
     search_fields = ('repo_path', 'name')
     actions = [start_reading_code]
 
 
 class ChangeRequestAdmin(admin.ModelAdmin):
-    list_display = ('id', 'project__id', 'project__name', 'description')
+    list_display = ('id', 'project__id', 'project__name', 'description', 'created_at')
     list_filter = ('project',)
     search_fields = ('project__name', 'id')
 

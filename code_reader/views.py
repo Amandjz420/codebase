@@ -403,7 +403,7 @@ class ExecutorView(APIView):
             ### User Query Refined query by AI agent: ``{refined_user_query}``\n\n
     
             ### Notes for Your Response:
-            1. If the question is about modifying or adding something in the project's code,
+            1. If the question is about modifying or adding or creating something in the project's code (can be about creating new project),
                 provide a detailed step-by-step response specifying what needs to be done in which files.
             2. If the question seeks information or explanation about the code, answer in a structured 
                 and detailed manner for easy understanding.
