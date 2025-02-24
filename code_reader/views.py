@@ -404,7 +404,7 @@ class ExecutorView(APIView):
     
             ### Notes for Your Response:
             1. If the question is about modifying or adding or creating something in the project's code (can be about creating new project),
-                provide a detailed step-by-step response specifying what needs to be done in which files.
+                provide a detailed step-by-step response specifying fully what needs to be done in which files. if anything is not clear, ask the user about it.
             2. If the question seeks information or explanation about the code, answer in a structured 
                 and detailed manner for easy understanding.
             ### Response:

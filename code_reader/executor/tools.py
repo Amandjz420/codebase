@@ -133,7 +133,8 @@ def code_editor(filepath: str, instructions: str, current_project_id: int, creat
             f"Instructions:\n{instructions}\n\n"
             "Please provide the updated code incorporating the instructions above. "
             "Ensure that the code is complete, syntactically correct, and follows best practices."
-            "and try to change what you need to change, and nothing extra."
+            "and MAKE SURE to change ONLY what you need to change, "
+            "and nothing extra in the current code (if code exists)"
         )
 
         updated_code_response = invoke_model(prompt, CodeUpdateResponse)
