@@ -297,8 +297,11 @@ def run_file_summarizer(project_id, file_path, updated_code=False):
     summary = summarize_file_content(file_path, file_content, tree_output)
 
     parent_path = Path(file_path).parent
+    if parent_path == project.repo_path:
+        parent_file = None
+    else:
+        parent_file = File.objects.filter(project=project, path=parent_path).first()
     # Get the parent file if it exists
-    parent_file = File.objects.filter(project=project, path=parent_path).first()
 
     #FIXME: removing analysis, as we are not using it anywhere for now
     # analysis = analyze_file_content(file_path, file_content, tree_output)

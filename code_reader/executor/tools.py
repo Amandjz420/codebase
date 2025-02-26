@@ -126,6 +126,8 @@ def code_editor(filepath: str, instructions: str, current_project_id: int, creat
                 existing_code = file.read()
             code_status = "The current code is:"
         else:
+            with open(absolute_filepath, 'w') as file:
+                file.write("")
             code_status = "No existing code found at the specified path."
 
         prompt = (
@@ -140,8 +142,10 @@ def code_editor(filepath: str, instructions: str, current_project_id: int, creat
         updated_code_response = invoke_model(prompt, CodeUpdateResponse)
         updated_code = updated_code_response.updated_code.strip()
         file_changed = False
+        with open(absolute_filepath, 'w') as file:
+            file.write(updated_code)
         if create:
-            async_file_summarizer(current_project_id, absolute_filepath, updated_code=True)
+            async_file_summarizer.delay(current_project_id, absolute_filepath, updated_code=True)
             file_changed = True
         elif updated_code.strip() != existing_code.strip():
             file_obj = File.objects.filter(path=absolute_filepath, project_id=current_project_id).first()
