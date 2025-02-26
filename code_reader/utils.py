@@ -326,7 +326,7 @@ def run_file_summarizer(project_id, file_path, updated_code=False):
     return file_obj
 
 
-def run_code_reader(project, file_obj=None):
+def run_code_reader(project, execution_creation_files=False):
     """First time reading the project"""
     # Main Logic
     repo_path = project.repo_path
@@ -416,6 +416,8 @@ def run_code_reader(project, file_obj=None):
         if file_object and file_object.content == content:
             print(f"file {file_object.path} skipped")
             continue
+
+
         # print(path, )
         summary = summarize_file_content(path, content, tree_output)
         summary_memory.save_context({"input": path}, {"output": summary})
@@ -442,6 +444,10 @@ def run_code_reader(project, file_obj=None):
                 'parent': parent_file
             }
         )
+        if execution_creation_files:
+            file_obj.updated_code = file_obj.content
+            file_obj.save()
+
 
         if created:
             print("File " + path + " created.")

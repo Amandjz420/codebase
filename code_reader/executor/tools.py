@@ -11,18 +11,24 @@ from code_reader.executor.utils import send_command_to_tmux, invoke_model, start
 from code_reader.executor.outputparser import CodeUpdateResponse
 from code_reader.firebase import write_in_executor_firestore
 from code_reader.models import Project, File
-from code_reader.tasks import async_file_summarizer
+from code_reader.tasks import async_file_summarizer, start_code_reading
 from code_reader.utils import run_file_summarizer, get_filtered_tree
+from code_reader.executor.utils import get_output_buffer
 from django.conf import settings
 
 
 @tool
-def terminal_executor(command: str, session_name: str) -> Dict[str, Any]:
+def terminal_executor(command: str, session_name: str, firebase_chat_id: str, project_id: int, create_new_file: bool = False) -> Dict[str, Any]:
     """
     Execute a shell command on specific terminal session and return its output, error message, and exit code.
+    Args:
+        command: command to be executed
+        session_name: session name
+        project_id: project ID in integer
+        firebase_chat_id: firebase_chat_id of the session
+        create_new_file: True if new files will be created based on the command, else False
     """
     try:
-        from code_reader.executor.utils import get_output_buffer
         # Safely split the command into arguments
         output_buffer = get_output_buffer(session_name)
         print("output_buffer")
@@ -49,6 +55,13 @@ def terminal_executor(command: str, session_name: str) -> Dict[str, Any]:
                 print(f"Changed working directory to: {os.getcwd()}")
             else:
                 print(f"Failed to change directory: {output}")
+
+        if create_new_file:
+            start_code_reading.delay(project_id, execution_creation=True)
+            time.sleep(10)
+            write_in_executor_firestore(firebase_chat_id, data={
+                'file_changed': True
+            }, messages=False)
         return {
             "message": output,
             "exit_code": 0

@@ -50,7 +50,9 @@ tools_info = """
       If there is any uncertainty about the file location or the filepath, 
       either infer the correct path from context or ask the user for clarification.\n
 
-    - terminal_executor: Use this to execute terminal commands. Input should be the command to run and terminal session_name.\n
+    - terminal_executor: Use this to execute terminal commands. 
+                Input should be the command to run, terminal session_name, project_id, firebase_chat_id and flag for
+                  new files will be created based on the command being executed.\n
 
     - search_web_browser: Use this tool when you need to browse the web for current or detailed information.
      Provide a well-crafted, specific query as a parameter to ensure accurate results. 
@@ -99,13 +101,38 @@ def create_plan(user_query, project_summary):
         "4. DO NOT add or create steps to test or run the application, unless user explicitly mentions it.\n"
         "5. Ensure the steps are detailed enough so that the executor agent can work on it, using its available tools, and "
         "can follow them without additional assumptions.\n"
-        "6. The executor agent will be connected to terminal, and at the project working directory. "
+        "6. The executor agent will be connected to terminal, and at the project working directory."
         "But might need to activate the environment if needed.\n\n"
         "Note: "
         "Available tools for execution with the agent to execute (for reference):\n"
         f"{tools_info}\n\n"
         "Additional context:\n"
         f"**Project Summary:** {project_summary}\n\n"
+        """
+         Notes:\n
+            # General Conditions:\n
+            # - Dont change the syntax of the code i provided you.\n
+            # - You are already connected to terminal and at the working directory.\n
+            # - Use sqlite database only.\n
+            # - Ignore the following directories: node_modules, .gitignore, .next, venv*.\n
+            # You dont have to use only django or nextjs, use any framework or any language to achieve the task in best way possible, of your choice.\n 
+            \n
+            But if you decide to use Django and Next keep these things in mind\n
+            \n
+            # Backend (Django):\n
+            #   Creating/Setup:\n
+            #     - Always add django rest framework and corsheader and allow connections from localhost:3000.\n
+            #     - Be mindful of editing the installed_apps in settings.\n
+            #     - (Optional) 'use "python3 -m venv venv" to create a new environment. (especially while creating new project if venv doesn't exist)'\n
+            #   Execution/Updating:\n
+            #     - use 'source venv/bin/activate' to activate the environment.\n
+
+            # Frontend (Next.js):\n
+            #   Creating/Setup:\n
+            #     - (No explicit creation steps mentioned, just ensure to keep frontend structure intact.)\n
+            #   Execution/Updating:\n
+            #     - Ignore directories related to Next.js build outputs, such as .next.\n
+        """
     )
 
     response = invoke_model(prompt, PlannerResponse)

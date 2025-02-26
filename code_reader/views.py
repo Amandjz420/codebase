@@ -43,7 +43,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             if len(project.repo_path) < 5:
                 new_repo_path = os.path.join(settings.MEDIA_ROOT, project.name)
                 os.makedirs(new_repo_path, exist_ok=True)
-                print("extracting the zip archive")
                 project.repo_path = new_repo_path
                 project.save()
 
