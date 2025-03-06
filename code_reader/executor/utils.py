@@ -19,6 +19,7 @@ from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from django.conf import settings
 
+
 # Function to check if tmux is installed
 
 # def check_tmux_installed():
@@ -38,13 +39,13 @@ if not OPENAI_API_KEY:
 # Initialize LLM
 llm = ChatOpenAI(
     api_key=OPENAI_API_KEY,
-    temperature=0.7,
-    model_name='gpt-4o',
+    # temperature=0.7,
+    model_name='o3-mini',
 )
 # llm = ChatGroq(
 #     model="llama-3.3-70b-versatile",  # Specify the desired model
 #     temperature=0.7,             # Adjust the temperature as needed
-#     api_key=OPENAI_API_KEY,             # Set the maximum number of tokens
+#     api_key=settings.GROQ_AI_KEY,             # Set the maximum number of tokens
 #     timeout=60,                  # Set a timeout for API requests
 #     max_retries=3                # Define the number of retries for failed requests
 # )
@@ -58,7 +59,7 @@ smarter_llm = ChatOpenAI(
 # smarter_llm = ChatGroq(
 #     model="llama3-70b-8192",  # Specify the desired model
 #     temperature=0.7,             # Adjust the temperature as needed
-#     api_key=OPENAI_API_KEY,             # Set the maximum number of tokens
+#     api_key=settings.GROQ_AI_KEY,             # Set the maximum number of tokens
 #     timeout=60,                  # Set a timeout for API requests
 #     max_retries=3                # Define the number of retries for failed requests
 # )

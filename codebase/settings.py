@@ -197,6 +197,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 OPEN_AI_KEY = os.getenv('OPEN_AI_KEY')
+GROQ_AI_KEY = os.getenv('GROQ_AI_KEY')
 SERPAPI_API_KEY = os.getenv('SERPAPI_API_KEY')
 
 # Configure media settings for file uploads

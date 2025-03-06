@@ -13,6 +13,7 @@ import PyPDF2
 load_dotenv()
 
 from openai import OpenAI
+from groq import Groq
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains.summarize import load_summarize_chain
 from langchain_openai import ChatOpenAI
@@ -21,23 +22,26 @@ from code_reader.models import File, Project
 from django.conf import settings
 
 # Initialize OpenAI and memory
-client = OpenAI(api_key=settings.OPEN_AI_KEY)
-llm = ChatOpenAI(model='gpt-4o', temperature=0.7, api_key=settings.OPEN_AI_KEY)
-llm_mini = ChatOpenAI(model='gpt-4o-mini', temperature=0.4, api_key=settings.OPEN_AI_KEY)
-# llm = ChatGroq(
-#     model="llama3-70b-8192",  # Specify the desired model
-#     temperature=0.7,             # Adjust the temperature as needed
-#     api_key=settings.OPEN_AI_KEY,             # Set the maximum number of tokens
-#     timeout=60,                  # Set a timeout for API requests
-#     max_retries=3                # Define the number of retries for failed requests
-# )
-# llm_mini = ChatGroq(
-#     model="llama3-70b-8192",  # Specify the desired model
-#     temperature=0.7,             # Adjust the temperature as needed
-#     api_key=settings.OPEN_AI_KEY,             # Set the maximum number of tokens
-#     timeout=60,                  # Set a timeout for API requests
-#     max_retries=3                # Define the number of retries for failed requests
-# )
+# client = OpenAI(api_key=settings.OPEN_AI_KEY)
+client = Groq(
+    api_key=settings.GROQ_AI_KEY,  # This is the default and can be omitted
+)
+# llm = ChatOpenAI(model='gpt-4o', temperature=0.7, api_key=settings.OPEN_AI_KEY)
+# llm_mini = ChatOpenAI(model='gpt-4o-mini', temperature=0.4, api_key=settings.OPEN_AI_KEY)
+llm = ChatGroq(
+    model="llama3-70b-8192",  # Specify the desired model
+    temperature=0.7,             # Adjust the temperature as needed
+    api_key=settings.GROQ_AI_KEY,             # Set the maximum number of tokens
+    timeout=60,                  # Set a timeout for API requests
+    max_retries=3                # Define the number of retries for failed requests
+)
+llm_mini = ChatGroq(
+    model="llama-3.1-8b-instant",  # Specify the desired model
+    temperature=0.7,             # Adjust the temperature as needed
+    api_key=settings.GROQ_AI_KEY,             # Set the maximum number of tokens
+    timeout=60,                  # Set a timeout for API requests
+    max_retries=3                # Define the number of retries for failed requests
+)
 summary_memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=500)
 summary_maker_chain = load_summarize_chain(llm=llm_mini, chain_type='map_reduce', token_max=10000)
 
@@ -178,7 +182,7 @@ def call_openai_llm_without_memory(prompt):
                 {"role": "assistant", "content": f"You are an helpful assistant. and you try your best to help the user\n"},
                 {"role": "user", "content": prompt}
             ],
-            model="gpt-4o",
+            model="o3-mini",
             temperature=0.7,
             stream=False
         )
@@ -201,7 +205,7 @@ def call_openai_llm(prompt, model="gpt-4o"):
                 {"role": "assistant", "content": f"You are a code reader agent. Context so far:\n\n{context}\n\n"},
                 {"role": "user", "content": prompt}
             ],
-            model=model,
+            model='llama-3.1-8b-instant',
             temperature=0.7,
             stream=False
         )
